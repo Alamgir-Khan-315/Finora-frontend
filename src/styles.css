@@ -178,7 +178,7 @@ tr.clickable { cursor: pointer; } tr.clickable:hover td { background: var(--hove
 .form-error { background: var(--overdue-soft); color: var(--overdue-text); padding: 10px 12px; border-radius: 10px; font-size: 13.5px; }
 .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
 .hint { color: var(--ink-3); font-size: 13px; } .hint code { background: var(--paper); padding: 1px 6px; border-radius: 5px; }
-.seg-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.seg-choice { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .seg-choice button { text-align: left; border: 1px solid var(--line); background: var(--field); border-radius: 12px; padding: 12px 14px; display: grid; gap: 2px; }
 .seg-choice button span { font-size: 13px; color: var(--ink-3); }
 .seg-choice button.on { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }

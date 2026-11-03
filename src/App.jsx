@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { LayoutDashboard, ReceiptText, Users, Settings as Cog, Plus, Menu, X, RefreshCw, AlertCircle, CheckCircle2, Sun, Moon, ArrowUpRight } from "lucide-react";
-import { apiRequest, setApiConfig } from "./config";
+import { API_CONFIG, apiRequest, readCachedSales, readOfflineSales, setApiConfig, writeCachedSales, writeOfflineSales } from "./config";
 import { normalize, demoSales, inRange, RANGES, fmtDate, toInputDate } from "./lib";
 import { Button } from "./components/ui";
 import Dashboard from "./components/Dashboard";
@@ -34,8 +34,10 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [salesQuery, setSalesQuery] = useState("");
   const [company, setCompanyState] = useState(lsGet("finora_company", "Finora Services"));
-  const [apiUrl, setApiUrl] = useState(lsGet("finora_api_url", "http://localhost:5000/api"));
-  const [mode, setMode] = useState(lsGet("finora_data_mode", "api"));
+  const [apiUrl, setApiUrl] = useState(API_CONFIG.baseUrl);
+  const [mode, setMode] = useState(API_CONFIG.mode);
+  const [offlineFallback, setOfflineFallback] = useState(false);
+  const [offlineReason, setOfflineReason] = useState("");
   const [portfolio, setPortfolio] = useState(lsGet("finora_portfolio", "#"));
   const [theme, setTheme] = useState(() => document.documentElement.dataset.theme === "dark" ? "dark" : "light");
 
@@ -50,10 +52,43 @@ export default function App() {
   useEffect(() => {
     let live = true;
     setLoading(true); setError("");
-    if (mode === "demo") { setRaw(demoSales()); setStatus("Demo mode"); setLoading(false); return; }
+    setOfflineFallback(false);
+    setOfflineReason("");
+    if (mode === "demo") {
+      setRaw(demoSales()); setStatus("Demo mode"); setLoading(false);
+      return () => { live = false; };
+    }
+    if (mode === "offline") {
+      try {
+        setRaw(readOfflineSales() ?? readCachedSales() ?? []);
+        setStatus("Offline mode");
+      } catch (e) {
+        setRaw([]); setStatus("Offline mode"); setError(e.message || "Could not load local sales.");
+      }
+      setLoading(false);
+      return () => { live = false; };
+    }
     apiRequest("/sales")
-      .then(list => { if (live) { setRaw(list); setStatus("Connected"); } })
-      .catch(e => { if (live) { setRaw([]); setStatus("Not connected"); setError(e.message || "Could not load sales."); } })
+      .then(result => {
+        const list = Array.isArray(result) ? result : result?.value ?? result?.data ?? result?.sales;
+        if (!Array.isArray(list)) throw new Error("The server returned an invalid sales list.");
+        if (live) {
+          setRaw(list); setStatus("Connected");
+          try { writeCachedSales(list); } catch (e) { setError(e.message); }
+        }
+      })
+      .catch(e => {
+        if (!live) return;
+        setOfflineFallback(true);
+        setOfflineReason(e.message || "Could not reach the server.");
+        setStatus("Offline mode");
+        try {
+          setRaw(readOfflineSales() ?? readCachedSales() ?? []);
+        } catch (storageError) {
+          setRaw([]);
+          setError(storageError.message || "Could not load saved offline sales.");
+        }
+      })
       .finally(() => live && setLoading(false));
     return () => { live = false; };
   }, [mode, apiUrl, reload]);
@@ -66,45 +101,74 @@ export default function App() {
   const services = useMemo(() => [...new Set(all.map(r => r.service))].filter(Boolean), [all]);
 
   const patch = useCallback((id, changes) => setRaw(list => list.map(r => r.id === id ? { ...r, ...changes } : r)), []);
+  const usesLocalSales = mode === "offline" || offlineFallback;
+  const saveOfflineRecords = records => {
+    writeOfflineSales(records);
+    setRaw(records);
+  };
 
   const update = async (inv, changes, message) => {
     try {
-      if (mode === "api") await apiRequest(`/sales/${encodeURIComponent(inv.id)}`, { method: "PATCH", body: JSON.stringify(changes) });
-      patch(inv.id, changes); notify(message);
+      if (usesLocalSales) {
+        saveOfflineRecords(raw.map(r => r.id === inv.id ? { ...r, ...changes } : r));
+      } else {
+        if (mode === "api") await apiRequest(`/sales/${encodeURIComponent(inv.id)}`, { method: "PATCH", body: JSON.stringify(changes) });
+        patch(inv.id, changes);
+      }
+      notify(message);
     } catch (e) { notify(`Could not update ${inv.id}: ${e.message}`, true); }
   };
   const markPaid = inv => update(inv, { status: "Paid", method: inv.method !== "Not recorded" ? inv.method : "Bank Transfer" }, `${inv.id} marked as paid`);
   const cancel = inv => update(inv, { status: "Cancelled" }, `${inv.id} cancelled`);
   const remove = async inv => {
     try {
-      if (mode === "api") await apiRequest(`/sales/${encodeURIComponent(inv.id)}`, { method: "DELETE" });
-      setRaw(list => list.filter(r => r.id !== inv.id)); setOpenId(null); notify(`${inv.id} deleted`);
+      if (usesLocalSales) saveOfflineRecords(raw.filter(r => r.id !== inv.id));
+      else {
+        if (mode === "api") await apiRequest(`/sales/${encodeURIComponent(inv.id)}`, { method: "DELETE" });
+        setRaw(list => list.filter(r => r.id !== inv.id));
+      }
+      setOpenId(null); notify(`${inv.id} deleted`);
     } catch (e) { notify(`Could not delete ${inv.id}: ${e.message}`, true); }
   };
   const save = async data => {
     let record;
-    if (mode === "api") record = await apiRequest("/sales", { method: "POST", body: JSON.stringify(data) });
+    if (mode === "api" && !offlineFallback) {
+      const result = await apiRequest("/sales", { method: "POST", body: JSON.stringify(data) });
+      const saved = result?.sale ?? result?.value ?? result?.data ?? result;
+      if (!saved || typeof saved !== "object") throw new Error("The server did not return the saved invoice.");
+      record = { ...saved, id: saved.id ?? saved.invoiceNumber ?? saved.invoice };
+      if (!record.id) throw new Error("The server saved the sale but did not return its invoice number. Refresh the sales list.");
+    }
     else {
       const next = Math.max(1000, ...raw.map(r => Number(String(r.id).replace(/\D/g, "")) || 0)) + 1;
       record = { ...data, id: `INV-${next}` };
     }
-    setRaw(list => [record, ...list]); setForm(false); setOpenId(record.id);
+    if (usesLocalSales) saveOfflineRecords([record, ...raw]);
+    else setRaw(list => [record, ...list]);
+    setForm(false); setOpenId(record.id);
     notify(`Sale saved as ${record.id}`);
   };
 
   const go = p => { setPage(p); setSalesQuery(""); setDrawer(false); window.scrollTo(0, 0); };
   const testApi = async url => {
     try {
-      const r = await fetch(url.replace(/\/$/, "") + "/health"); const info = await r.json();
+      const r = await fetch(url.trim().replace(/\/+$/, "") + "/health");
+      if (!r.ok) throw new Error(`Health check failed: ${r.status}`);
+      const info = await r.json();
       notify(info.database === "connected" ? "Connected to MongoDB" : "Server is running but MongoDB is not connected", info.database !== "connected");
-    } catch { notify("Could not reach the server. Check the address and that the server is running.", true); }
+    } catch (e) { notify(e.message || "Could not reach the server. Check the address and that the server is running.", true); }
   };
-  const saveApi = (url, m) => { setApiConfig({ baseUrl: url, mode: m }); setApiUrl(url.trim()); setMode(m); setReload(x => x + 1); notify("Connection saved"); };
+  const saveApi = (url, m) => {
+    try {
+      setApiConfig({ baseUrl: url, mode: m });
+      setApiUrl(url.trim()); setMode(m); setOfflineFallback(false); setReload(x => x + 1); notify("Connection saved");
+    } catch (e) { notify(e.message || "Could not save connection settings.", true); }
+  };
   const setCompany = name => { try { localStorage.setItem("finora_company", name); } catch {} setCompanyState(name); notify("Business name saved"); };
 
   const showRange = page === "Dashboard" || page === "Sales & invoices";
   const [title, sub] = HEAD[page];
-  const dot = status === "Connected" ? "ok" : status === "Demo mode" ? "demo" : "bad";
+  const dot = status === "Connected" ? "ok" : status === "Demo mode" || status === "Offline mode" ? "demo" : "bad";
 
   return <div className="shell">
     <aside className={`side ${drawer ? "open" : ""}`}>
@@ -130,8 +194,10 @@ export default function App() {
       </header>
 
       <div className="content enter" key={page}>
-        {mode === "demo" && <div className="banner demo"><AlertCircle size={16} />You are looking at demo data. Switch to live data in Settings to see your own sales.</div>}
-        {error && <div className="banner bad"><AlertCircle size={16} /><span>{error} Make sure the server is running and MongoDB Atlas allows your IP address.</span><Button kind="outline" onClick={() => setReload(x => x + 1)}>Try again</Button></div>}
+        {mode === "demo" && <div className="banner demo"><AlertCircle size={16} />You are looking at demo data. Switch to live or offline data in Settings to see your own sales.</div>}
+        {mode === "offline" && <div className="banner demo"><AlertCircle size={16} />Offline data is saved on this device only. It is not synced to the server.</div>}
+        {offlineFallback && <div className="banner demo"><AlertCircle size={16} /><span>Backend unavailable ({offlineReason}). Showing saved local data; changes are saved on this device and are not synced automatically.</span><Button kind="outline" onClick={() => setReload(x => x + 1)}>Retry live</Button></div>}
+        {error && <div className="banner bad"><AlertCircle size={16} /><span>{error}</span><Button kind="outline" onClick={() => setReload(x => x + 1)}>Try again</Button></div>}
 
         <div className="page-head">
           <div><h1>{title}</h1><p>{sub}</p></div>
