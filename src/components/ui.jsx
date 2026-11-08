@@ -52,3 +52,22 @@ export function useCountUp(target, ms = 900) {
   return val;
 }
 export function Count({ value, format = v => v, ms }) { return <>{format(useCountUp(value, ms))}</>; }
+
+// Live date + time that ticks every second.
+export function Clock() {
+  const [now, setNow] = React.useState(() => new Date());
+  useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
+  const date = now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const time = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return <div className="clock" aria-label={`${date}, ${time}`}>
+    <span className="clock-date">{date}</span>
+    <time className="clock-time num" dateTime={now.toISOString()}>{time}</time>
+  </div>;
+}
+
+// Pill-style switcher, e.g. This month | Last 30 days | This year | All data.
+export function Segmented({ value, onChange, options, label }) {
+  return <div className="segmented" role="radiogroup" aria-label={label}>
+    {options.map(([k, text]) => <button key={k} role="radio" aria-checked={value === k} className={value === k ? "on" : ""} onClick={() => onChange(k)}>{text}</button>)}
+  </div>;
+}

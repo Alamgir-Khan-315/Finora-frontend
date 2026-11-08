@@ -21,6 +21,7 @@ export const toInputDate = d => {
 export function normalize(raw) {
   const date = toLocalDay(raw.date) || new Date();
   const dueDate = toLocalDay(raw.dueDate);
+  const paidAt = toLocalDay(raw.paidAt);
   const rawStatus = raw.status || "Pending";
   const today = startOfToday();
   const overdue = rawStatus === "Pending" && dueDate && dueDate < today;
@@ -30,7 +31,7 @@ export function normalize(raw) {
     customerEmail: raw.customerEmail || "",
     service: raw.service || "",
     amount: Number(raw.amount) || 0,
-    date, dueDate, rawStatus,
+    date, dueDate, paidAt, rawStatus,
     status: overdue ? "Overdue" : rawStatus,
     daysLate: overdue ? Math.round((today - dueDate) / 864e5) : 0,
     method: raw.method || "Not recorded",
@@ -42,14 +43,33 @@ export const STATUSES = ["Paid", "Pending", "Overdue", "Cancelled"];
 export const totalOf = (rows, status) => rows.filter(x => !status || x.status === status).reduce((a, x) => a + x.amount, 0);
 
 export const RANGES = [
-  ["all", "All time"], ["month", "This month"], ["30d", "Last 30 days"], ["year", "This year"]
+  ["month", "This month"], ["30d", "Last 30 days"], ["year", "This year"], ["all", "All data"]
 ];
-export function inRange(row, range) {
+export function dateInRange(d, range) {
   const now = new Date();
-  if (range === "month") return row.date.getMonth() === now.getMonth() && row.date.getFullYear() === now.getFullYear();
-  if (range === "year") return row.date.getFullYear() === now.getFullYear();
-  if (range === "30d") return now - row.date <= 30 * 864e5 && row.date <= now;
+  if (range === "month") return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  if (range === "year") return d.getFullYear() === now.getFullYear();
+  if (range === "30d") return now - d <= 30 * 864e5 && d <= now;
   return true;
+}
+export const inRange = (row, range) => dateInRange(row.date, range);
+
+// Money counts as income on the day it was received (paid date), falling back to the invoice date.
+export const incomeDate = r => r.paidAt || r.date;
+export const expenseDate = e => toLocalDay(e.date) || new Date();
+export const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+export const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+// One row per month of `year`: billed, income received, expenses, and profit (income - expenses).
+export function monthlyReport(sales, expenses, year) {
+  const rows = MONTHS.map((label, m) => ({ m, label, name: MONTHS_LONG[m], billed: 0, income: 0, expense: 0, invoices: 0, count: 0 }));
+  sales.forEach(r => {
+    if (r.status === "Cancelled") return;
+    if (r.date.getFullYear() === year) { rows[r.date.getMonth()].billed += r.amount; rows[r.date.getMonth()].invoices++; }
+    if (r.status === "Paid") { const d = incomeDate(r); if (d.getFullYear() === year) rows[d.getMonth()].income += r.amount; }
+  });
+  expenses.forEach(e => { const d = expenseDate(e); if (d.getFullYear() === year) { rows[d.getMonth()].expense += Number(e.amount) || 0; rows[d.getMonth()].count++; } });
+  return rows.map(r => ({ ...r, profit: r.income - r.expense, margin: r.income > 0 ? ((r.income - r.expense) / r.income) * 100 : null, active: r.billed || r.income || r.expense }));
 }
 
 export function dueText(row) {
@@ -70,32 +90,4 @@ export function downloadText(name, text, type = "text/csv") {
   const url = URL.createObjectURL(new Blob(["﻿" + text], { type: `${type};charset=utf-8` }));
   const a = Object.assign(document.createElement("a"), { href: url, download: name });
   document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-}
-
-// Sample records for demo mode, always relative to today so they look current.
-// Columns: customer, service, amount, issued N days ago, due N days ago (negative = in the future), status, method
-export function demoSales() {
-  const day = n => { const d = startOfToday(); d.setDate(d.getDate() - n); return d.toISOString(); };
-  const rows = [
-    ["Vertex Studio", "Website Development", 125000, 0, -14, "Paid", "Bank Transfer"],
-    ["Northstar Labs", "UI/UX Design", 68000, 1, -13, "Pending", ""],
-    ["Apex Traders", "SEO Services", 42000, 2, -12, "Paid", "Card"],
-    ["Urban Nest", "Mobile App", 210000, 21, 7, "Pending", ""],
-    ["Pixel House", "Brand Identity", 35000, 11, -3, "Paid", "Cash"],
-    ["Bright Path", "Monthly Support", 18000, 17, 3, "Pending", ""],
-    ["Orbit Foods", "Website Development", 86000, 5, -9, "Pending", ""],
-    ["Vertex Studio", "Monthly Support", 24000, 20, 6, "Paid", "Bank Transfer"],
-    ["Orbit Foods", "Website Development", 96000, 27, 13, "Paid", "Bank Transfer"],
-    ["Apex Traders", "SEO Services", 42000, 34, 20, "Paid", "Card"],
-    ["Northstar Labs", "Brand Identity", 52000, 41, 27, "Paid", "Online"],
-    ["Urban Nest", "UI/UX Design", 74000, 58, 44, "Paid", "Bank Transfer"],
-    ["Pixel House", "SEO Services", 38000, 66, 52, "Paid", "Cash"],
-    ["Orbit Foods", "Mobile App", 180000, 88, 74, "Paid", "Bank Transfer"],
-    ["Bright Path", "UI/UX Design", 46000, 97, 83, "Cancelled", ""],
-    ["Vertex Studio", "Mobile App", 160000, 121, 107, "Paid", "Bank Transfer"]
-  ];
-  return rows.map((r, i) => ({
-    id: `INV-${1060 - i}`, customer: r[0], customerEmail: `accounts@${r[0].toLowerCase().replace(/\s+/g, "")}.pk`,
-    service: r[1], amount: r[2], date: day(r[3]), dueDate: day(r[4]), status: r[5], method: r[6] || "Not recorded", notes: ""
-  }));
 }

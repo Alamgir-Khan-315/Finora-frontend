@@ -5,7 +5,7 @@ import { downloadInvoicePdf } from "../pdf";
 import { Modal, Button, Status } from "./ui";
 import Logo from "./Logo";
 
-export default function InvoiceModal({ invoice: inv, company, onClose, onMarkPaid, onCancel, onDelete, notify }) {
+export default function InvoiceModal({ invoice: inv, company, onClose, onMarkPaid, onCancel, onDelete, canEdit = true, canDelete = true, notify }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const open = inv.status === "Pending" || inv.status === "Overdue";
   const due = open ? inv.amount : 0;
@@ -17,10 +17,10 @@ export default function InvoiceModal({ invoice: inv, company, onClose, onMarkPai
       <div className="modal-actions-left">
         {confirmDelete
           ? <><span className="confirm-text">Delete this invoice permanently?</span><Button kind="danger" onClick={() => onDelete(inv)}>Yes, delete</Button><Button kind="ghost" onClick={() => setConfirmDelete(false)}>Keep it</Button></>
-          : <><Button kind="ghost" onClick={() => setConfirmDelete(true)}><Trash2 size={15} />Delete</Button>
-            {inv.status !== "Cancelled" && inv.status !== "Paid" && <Button kind="ghost" onClick={() => onCancel(inv)}><Ban size={15} />Cancel invoice</Button>}</>}
+          : <>{canDelete && <Button kind="ghost" onClick={() => setConfirmDelete(true)}><Trash2 size={15} />Delete</Button>}
+            {canEdit && inv.status !== "Cancelled" && inv.status !== "Paid" && <Button kind="ghost" onClick={() => onCancel(inv)}><Ban size={15} />Cancel invoice</Button>}</>}
       </div>
-      {open && <Button kind="outline" onClick={() => onMarkPaid(inv)}><Check size={15} />Mark as paid</Button>}
+      {open && canEdit && <Button kind="outline" onClick={() => onMarkPaid(inv)}><Check size={15} />Mark as paid</Button>}
       <Button onClick={download}><Download size={15} />Download PDF</Button>
     </>}>
     <article className="paper">
