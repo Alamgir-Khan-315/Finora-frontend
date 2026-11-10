@@ -7,6 +7,8 @@ export const LOCAL_API = clean(env.VITE_LOCAL_API_URL) || "http://localhost:5000
 const CANDIDATES = [[ONLINE_API, "Online server"], [LOCAL_API, "Local server"]].filter(([u], i, a) => a.findIndex(x => x[0] === u) === i);
 
 let active = null;       // { url, label, dbReady, reason }
+let problem = "";        // why no server could be used, shown to the user
+const MIN_VERSION = 3;   // backends older than this have no expenses/settings routes
 let resolving = null;
 export const getActiveServer = () => active;
 
@@ -15,8 +17,9 @@ async function probe([url, label]) {
   try {
     const r = await fetch(`${url}/health`, { signal: ctrl.signal, cache: "no-store" });
     const j = await r.json();
-    return r.ok && j?.ok ? { url, label, dbReady: j.database === "connected", reason: j.reason || "" } : null;
-  } catch { return null; }
+    if (!(r.ok && j?.ok)) return { url, label, down: true };
+    return { url, label, dbReady: j.database === "connected", reason: j.reason || "", outdated: parseInt(j.version, 10) < MIN_VERSION || !j.version };
+  } catch { return { url, label, down: true }; }
   finally { clearTimeout(timer); }
 }
 
@@ -24,8 +27,9 @@ async function probe([url, label]) {
 export function resolveServer(force = false) {
   if (active && !force) return Promise.resolve(active);
   resolving ??= Promise.all(CANDIDATES.map(probe)).then(found => {
-    const alive = found.filter(Boolean);
+    const alive = found.filter(s => !s.down && !s.outdated);
     active = alive.find(s => s.dbReady) || alive[0] || null;
+    problem = active ? "" : found.map(s => s.down ? `${s.label}: not reachable.` : s.outdated ? `${s.label}: running an OLD version of the backend (no expenses). Redeploy the latest Finora-backend.` : "").filter(Boolean).join(" ");
     return active;
   }).finally(() => { resolving = null; });
   return resolving;
@@ -43,17 +47,17 @@ async function send(base, path, options) {
   return body;
 }
 
-const NO_SERVER = "Cannot reach the online server or a local server. Check your internet, or start the local backend (npm run dev in Finora-backend).";
+const noServer = () => `${problem || "No server found."} Start the local backend (npm run dev in Finora-backend) or fix the online one.`;
 
 export async function apiRequest(path, options = {}) {
   let server = await resolveServer();
-  if (!server) throw new Error(NO_SERVER);
+  if (!server) throw new Error(noServer());
   try { return await send(server.url, path, options); }
   catch (e) {
     if (e.status) throw e;                      // the server answered with an error: report it as is
     server = await resolveServer(true);         // network failure: look for another server and retry once
-    if (!server) throw new Error(NO_SERVER);
+    if (!server) throw new Error(noServer());
     try { return await send(server.url, path, options); }
-    catch (e2) { throw e2.status ? e2 : new Error(NO_SERVER); }
+    catch (e2) { throw e2.status ? e2 : new Error(noServer()); }
   }
 }

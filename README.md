@@ -6,6 +6,8 @@ React (Vite) frontend + Express backend + MongoDB. Single-owner app: no login, n
 - **Dashboard**: live date and time, period switch (This month / Last 30 days / This year / All data), money received, expenses, net profit, still to collect, follow-up list, charts.
 - **Sales & invoices**: filters (status, date range, payment method, search), invoice preview and PDF, CSV export.
 - **Expenses**: *Monthly report* (income, expenses, profit or loss per month, margin, yearly total, CSV) and *Expenses & budgets* (add/delete expenses, monthly category limits with alerts).
+- **WhatsApp**: add the client's WhatsApp number when creating a sale (auto-filled for returning clients). Open any invoice and press the green WhatsApp button: on a computer it copies the invoice picture and opens that client's chat with the message typed in (press Ctrl+V, then Send); on a phone it opens the share sheet with picture and message together. Nothing is downloaded automatically: "Picture" and "PDF" only download when you click them.
+- **Logo**: replace `public/logo.png`, `logo-512.png`, `logo-192.png`, `apple-touch-icon.png`, `favicon-*.png` and `favicon.ico` to change the logo / browser icon.
 - **Calculators**: loan EMI, investment growth, currency converter.
 - **Settings**: business name and portfolio link (saved in the database).
 - Day and night mode (toggle in the top bar, remembers your choice).

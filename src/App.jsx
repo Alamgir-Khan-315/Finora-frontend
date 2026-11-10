@@ -47,7 +47,7 @@ export default function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     try { localStorage.setItem("finora_theme", theme); } catch {}
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#0b1020" : "#4338ca");
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#0b1020" : "#1c3b6c");
   }, [theme]);
 
   const notify = useCallback((text, bad = false) => { setToast({ text, bad }); clearTimeout(notify.t); notify.t = setTimeout(() => setToast(null), 3200); }, []);
@@ -69,7 +69,11 @@ export default function App() {
   const dashRows = useMemo(() => all.filter(r => dateInRange(r.date, dashRange)), [all, dashRange]);
   const salesRows = useMemo(() => all.filter(r => dateInRange(r.date, salesRange)), [all, salesRange]);
   const open = all.find(r => r.id === openId) || null;
-  const customers = useMemo(() => [...new Map(all.map(r => [r.customer, { name: r.customer, email: r.customerEmail }])).values()], [all]);
+  const customers = useMemo(() => {
+    const map = new Map();   // newest invoice first, so the most recent email/number wins
+    all.forEach(r => { const c = map.get(r.customer) || { name: r.customer, email: "", phone: "" }; c.email ||= r.customerEmail; c.phone ||= r.customerPhone; map.set(r.customer, c); });
+    return [...map.values()];
+  }, [all]);
   const services = useMemo(() => [...new Set(all.map(r => r.service))].filter(Boolean), [all]);
   const budgetLevels = useMemo(() => budgetStatus(expenses, budgets), [expenses, budgets]);
 
@@ -78,6 +82,7 @@ export default function App() {
     try { replace(inv.id, await apiRequest(`/sales/${encodeURIComponent(inv.id)}`, { method: "PATCH", body: JSON.stringify(changes) })); notify(message); }
     catch (e) { notify(`Could not update ${inv.id}: ${e.message}`, true); }
   };
+  const savePhone = (inv, phone) => update(inv, { customerPhone: phone }, phone ? "WhatsApp number saved" : "WhatsApp number removed");
   const markPaid = inv => update(inv, { status: "Paid", method: inv.method !== "Not recorded" ? inv.method : "Bank Transfer" }, `${inv.id} marked as paid`);
   const cancel = inv => update(inv, { status: "Cancelled" }, `${inv.id} cancelled`);
   const remove = async inv => {
@@ -106,7 +111,7 @@ export default function App() {
   return <div className="shell">
     <aside className={`side ${drawer ? "open" : ""}`}>
       <div className="side-top">
-        <div className="logo"><Logo size={34} /><b>finora</b></div>
+        <div className="logo"><Logo size={42} /><b>finora</b></div>
         <button className="icon-btn side-close" onClick={() => setDrawer(false)} aria-label="Close menu"><X size={18} /></button>
       </div>
       <div className="company"><small>Business</small><b>{company}</b></div>
@@ -150,7 +155,7 @@ export default function App() {
       </footer>
     </main>
 
-    {open && <InvoiceModal invoice={open} company={company} onClose={() => setOpenId(null)} onMarkPaid={markPaid} onCancel={cancel} onDelete={remove} notify={notify} />}
+    {open && <InvoiceModal invoice={open} company={company} onClose={() => setOpenId(null)} onMarkPaid={markPaid} onCancel={cancel} onDelete={remove} onSavePhone={savePhone} notify={notify} />}
     {form && <SaleForm services={services} customers={customers} onClose={() => setForm(false)} onSave={save} />}
     {toast && <div className={`toast ${toast.bad ? "bad" : ""}`} role="status">{toast.bad ? <AlertCircle size={17} /> : <CheckCircle2 size={17} />}{toast.text}</div>}
   </div>;

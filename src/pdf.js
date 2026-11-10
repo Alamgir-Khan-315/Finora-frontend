@@ -1,8 +1,9 @@
 import { jsPDF } from "jspdf";
-import { money, fmtDate } from "./lib";
+import { money, fmtDate, prettyPhone, loadLogo } from "./lib";
 
 // Draws a clean one-page A4 invoice and saves it as <invoice number>.pdf
-export function downloadInvoicePdf(inv, company = "Finora Services") {
+export async function downloadInvoicePdf(inv, company = "Finora Services") {
+  const logo = await loadLogo();
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const W = 210, M = 18;
   const ink = [20, 26, 36], soft = [110, 119, 135], line = [227, 229, 222], brand = [42, 59, 214];
@@ -10,14 +11,13 @@ export function downloadInvoicePdf(inv, company = "Finora Services") {
 
   // Header
   doc.setFillColor(...ink); doc.rect(0, 0, W, 44, "F");
-  doc.setFillColor(...brand); doc.roundedRect(M, 13, 14, 14, 3, 3, "F");
-  doc.setFillColor(190, 196, 245); doc.roundedRect(M + 3, 20, 2, 4.5, .5, .5, "F");
-  doc.setFillColor(220, 224, 250); doc.roundedRect(M + 6, 17.5, 2, 7, .5, .5, "F");
-  doc.setFillColor(255, 255, 255); doc.roundedRect(M + 9, 15, 2, 9.5, .5, .5, "F");
-  doc.setDrawColor(60, 207, 145); doc.setLineWidth(.7); doc.lines([[2.4, -1.8], [2, 1.2], [2.8, -2.6]], M + 2.6, 19.2);
+  if (logo) {
+    const c = document.createElement("canvas"); c.width = c.height = 256; c.getContext("2d").drawImage(logo, 0, 0, 256, 256);
+    doc.addImage(c.toDataURL("image/png"), "PNG", M, 11, 20, 20);
+  }
   doc.setTextColor(255);
-  doc.setFontSize(15); doc.text(company, M + 19, 21);
-  doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(170, 178, 192); doc.text("Sales invoice", M + 19, 27);
+  doc.setFontSize(15); doc.text(company, M + 25, 21);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(170, 178, 192); doc.text("Sales invoice", M + 25, 27);
   doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(26); doc.text("INVOICE", W - M, 24, { align: "right" });
   doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(170, 178, 192); doc.text(inv.id, W - M, 31, { align: "right" });
 
@@ -38,6 +38,8 @@ export function downloadInvoicePdf(inv, company = "Finora Services") {
   doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...soft); doc.text("Bill to", M, 84);
   doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.setTextColor(...ink); doc.text(inv.customer, M, 92);
   if (inv.customerEmail) { doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(...soft); doc.text(inv.customerEmail, M, 98); }
+
+  if (inv.customerPhone) { doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(...soft); doc.text(`WhatsApp: ${prettyPhone(inv.customerPhone)}`, M, inv.customerEmail ? 104 : 98); }
 
   // Line item
   doc.setFillColor(245, 246, 243); doc.rect(M, 112, W - 2 * M, 10, "F");

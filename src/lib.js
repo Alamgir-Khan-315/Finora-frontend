@@ -29,6 +29,7 @@ export function normalize(raw) {
     id: raw.id,
     customer: raw.customer || "",
     customerEmail: raw.customerEmail || "",
+    customerPhone: raw.customerPhone || "",
     service: raw.service || "",
     amount: Number(raw.amount) || 0,
     date, dueDate, paidAt, rawStatus,
@@ -91,3 +92,21 @@ export function downloadText(name, text, type = "text/csv") {
   const a = Object.assign(document.createElement("a"), { href: url, download: name });
   document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 }
+
+// WhatsApp wants the number in international form without "+" or spaces. Local Pakistani numbers (03xx...) become 92 3xx...
+export function waNumber(input) {
+  const raw = String(input || "").trim();
+  if (!raw) return "";
+  let d = raw.replace(/\D/g, "");
+  if (raw.startsWith("+")) return d;
+  if (d.startsWith("00")) return d.slice(2);
+  if (d.startsWith("0")) return "92" + d.slice(1);
+  if (d.length === 10 && d.startsWith("3")) return "92" + d;
+  return d;
+}
+export const isValidPhone = v => { const d = String(v || "").replace(/\D/g, ""); return /^[+\d][\d\s\-()]*$/.test(String(v).trim()) && d.length >= 7 && d.length <= 15; };
+export const prettyPhone = v => { const n = waNumber(v); return n ? `+${n}` : ""; };
+
+// Round business logo as an <img>, loaded once (used when drawing the invoice picture and PDF).
+let logoPromise;
+export const loadLogo = () => logoPromise ??= new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = `${import.meta.env.BASE_URL}logo-512.png`; });

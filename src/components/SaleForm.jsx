@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { Save } from "lucide-react";
-import { toInputDate } from "../lib";
+import { toInputDate, isValidPhone } from "../lib";
 import { Modal, Button } from "./ui";
 
 export default function SaleForm({ services, customers, onClose, onSave }) {
   const due = new Date(); due.setDate(due.getDate() + 14);
-  const [f, setF] = useState({ customer: "", customerEmail: "", service: "", amount: "", date: toInputDate(), dueDate: toInputDate(due), status: "Pending", method: "Bank Transfer", notes: "" });
+  const [f, setF] = useState({ customer: "", customerEmail: "", customerPhone: "", service: "", amount: "", date: toInputDate(), dueDate: toInputDate(due), status: "Pending", method: "Bank Transfer", notes: "" });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const set = (k, v) => setF(x => ({ ...x, [k]: v }));
@@ -13,11 +13,12 @@ export default function SaleForm({ services, customers, onClose, onSave }) {
   const pickCustomer = v => {
     set("customer", v);
     const known = customers.find(c => c.name.toLowerCase() === v.trim().toLowerCase());
-    if (known && !f.customerEmail) set("customerEmail", known.email);
+    if (known) setF(x => ({ ...x, customer: v, customerEmail: x.customerEmail || known.email || "", customerPhone: x.customerPhone || known.phone || "" }));
   };
   const submit = async e => {
     e.preventDefault(); setErr("");
     if (!f.customer.trim()) return setErr("Enter the customer name.");
+    if (f.customerPhone.trim() && !isValidPhone(f.customerPhone)) return setErr("WhatsApp number looks wrong. Use e.g. 0300 1234567 or +92 300 1234567.");
     if (!f.service.trim()) return setErr("Enter the service sold.");
     if (!(Number(f.amount) > 0)) return setErr("Enter an amount greater than zero.");
     setBusy(true);
@@ -30,6 +31,7 @@ export default function SaleForm({ services, customers, onClose, onSave }) {
     <form id="sale-form" className="form" onSubmit={submit}>
       <label>Customer<input list="cust-list" value={f.customer} onChange={e => pickCustomer(e.target.value)} placeholder="e.g. Vertex Studio" autoFocus /></label>
       <datalist id="cust-list">{customers.map(c => <option key={c.name} value={c.name} />)}</datalist>
+      <label><span>WhatsApp number <em>to send invoices</em></span><input type="tel" inputMode="tel" value={f.customerPhone} onChange={e => set("customerPhone", e.target.value)} placeholder="0300 1234567" /></label>
       <label><span>Customer email <em>optional</em></span><input type="email" value={f.customerEmail} onChange={e => set("customerEmail", e.target.value)} placeholder="accounts@company.com" /></label>
       <label>Service sold<input list="svc-list" value={f.service} onChange={e => set("service", e.target.value)} placeholder="e.g. Website Development" /></label>
       <datalist id="svc-list">{services.map(s => <option key={s} value={s} />)}</datalist>
