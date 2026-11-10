@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { Download, Check, Ban, Trash2, Image as ImageIcon, Pencil } from "lucide-react";
+import { Download, Check, Ban, Trash2, Image as ImageIcon, Pencil, Share2 } from "lucide-react";
 import { money, fmtDate, isValidPhone, prettyPhone } from "../lib";
-import { sendInvoiceOnWhatsApp, downloadInvoiceImage } from "../whatsapp";
+import { sendInvoiceOnWhatsApp, shareInvoicePicture, canSharePicture, downloadInvoiceImage } from "../whatsapp";
 import { downloadInvoicePdf } from "../pdf";
 import { Modal, Button, Status } from "./ui";
 import Logo from "./Logo";
@@ -20,10 +20,17 @@ export default function InvoiceModal({ invoice: inv, company, onClose, onMarkPai
     if (phone.trim() && !isValidPhone(phone)) return notify("WhatsApp number looks wrong. Use e.g. 0300 1234567 or +92 300 1234567.", true);
     await onSavePhone(inv, phone.trim()); setEditPhone(false);
   };
+  const share = async () => {
+    setBusy(true);
+    try { const msg = await shareInvoicePicture({ ...inv, customerPhone: editPhone ? phone : inv.customerPhone }, company); if (msg) notify(msg); }
+    catch (e) { notify(e.message, true); }
+    finally { setBusy(false); }
+  };
   const whatsapp = async () => {
+    if (editPhone && phone.trim() && isValidPhone(phone) && phone.trim() !== inv.customerPhone) { try { await onSavePhone(inv, phone.trim()); setEditPhone(false); } catch {} }
     setBusy(true);
     try { const msg = await sendInvoiceOnWhatsApp({ ...inv, customerPhone: editPhone ? phone : inv.customerPhone }, company); if (msg) notify(msg); }
-    catch (e) { notify(`Could not prepare the invoice picture: ${e.message}`, true); }
+    catch (e) { notify(e.message, true); }
     finally { setBusy(false); }
   };
   const picture = async () => { try { await downloadInvoiceImage(inv, company); notify(`${inv.id}.png downloaded`); } catch (e) { notify(e.message, true); } };
@@ -40,7 +47,8 @@ export default function InvoiceModal({ invoice: inv, company, onClose, onMarkPai
       {open && canEdit && <Button kind="outline" onClick={() => onMarkPaid(inv)}><Check size={15} />Mark as paid</Button>}
       <Button kind="outline" onClick={picture} title="Download the invoice as a picture"><ImageIcon size={15} /><span className="btn-text">Picture</span></Button>
       <Button kind="outline" onClick={download}><Download size={15} /><span className="btn-text">PDF</span></Button>
-      <Button kind="whatsapp" onClick={whatsapp} disabled={busy} title="Send this invoice on WhatsApp"><WhatsAppIcon />{busy ? "Preparing…" : "WhatsApp"}</Button>
+      {canSharePicture() && <Button kind="outline" onClick={share} disabled={busy} title="Share picture + message through the share sheet (you choose the chat)"><Share2 size={15} /><span className="btn-text">Share</span></Button>}
+      <Button kind="whatsapp" onClick={whatsapp} disabled={busy} title="Open this client's WhatsApp chat with the message and the invoice picture copied"><WhatsAppIcon />{busy ? "Preparing…" : "WhatsApp"}</Button>
     </>}>
     <div className="wa-bar">
       <WhatsAppIcon />
