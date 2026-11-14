@@ -245,7 +245,7 @@ table.report tfoot td { border-top: 2px solid var(--line-strong); border-bottom:
 
 /* ---------- modal ---------- */
 .backdrop { position: fixed; inset: 0; background: rgba(6, 10, 22, .6); backdrop-filter: blur(3px); display: grid; place-items: center; padding: 20px; z-index: 50; animation: fade .15s; }
-.modal { width: min(520px, 100%); max-height: calc(100vh - 40px); display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: 0 28px 70px rgba(0,0,0,.4); animation: pop .18s ease-out; }
+.modal { width: min(520px, 100%); max-height: calc(100vh - 40px); max-height: calc(100dvh - 40px); display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: 0 28px 70px rgba(0,0,0,.4); animation: pop .18s ease-out; }
 .modal-wide { width: min(880px, 100%); background: var(--modal-bg); }
 @keyframes fade { from { opacity: 0; } } @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.985); } }
 .modal-head { display: flex; justify-content: space-between; gap: 12px; padding: 20px 22px 14px; }
@@ -327,11 +327,11 @@ table.report tfoot td { border-top: 2px solid var(--line-strong); border-bottom:
 .logo-img { display: block; flex: none; border-radius: 50%; object-fit: cover; box-shadow: 0 2px 10px var(--shadow); background: #fff; }
 .logo-svg { display: block; flex: none; }
 .logo-svg .bar { transform-box: fill-box; transform-origin: bottom; animation: bar-rise .7s cubic-bezier(.2,.8,.2,1) both; }
-.logo-svg .bar:nth-of-type(2) { animation-delay: .08s; } .logo-svg .bar:nth-of-type(3) { animation-delay: .16s; }
+.logo-svg .bar:nth-of-type(3) { animation-delay: .08s; } .logo-svg .bar:nth-of-type(4) { animation-delay: .16s; }
 .logo-svg .trend { stroke-dasharray: 40; animation: draw .8s .35s ease-out both; }
 @keyframes bar-rise { from { transform: scaleY(0); } }
 @keyframes draw { from { stroke-dashoffset: 40; } to { stroke-dashoffset: 0; } }
-.paper-brand .logo-img { width: 44px; height: 44px; }
+.paper-brand .logo-svg { width: 44px; height: 44px; }
 
 /* ---------- theme toggle ---------- */
 .theme-toggle { position: relative; overflow: hidden; }
@@ -386,3 +386,87 @@ tbody tr:nth-child(6), .followup li:nth-child(6) { animation-delay: 200ms; } tbo
   .segmented { width: 100%; } .segmented button { flex: 1; padding: 8px 10px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } html { scroll-behavior: auto; } }
+
+/* ---------- Part payments, work orders, permissions ---------- */
+.status-partial { background: rgba(37, 99, 235, .12); color: #2563eb; }
+[data-theme="dark"] .status-partial { background: rgba(96, 165, 250, .16); color: #93c5fd; }
+td small, .who small { display: block; }
+.stamp.partial { color: #2563eb; border-color: #2563eb; }
+
+.pay-panel { border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; margin-bottom: 14px; background: var(--surface); }
+.pay-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pay-head > div { display: flex; align-items: center; gap: 8px; }
+.pay-head span { color: var(--ink-2); font-size: 14px; } .pay-head em { font-style: normal; font-weight: 700; color: var(--pending-ink); } .pay-head em.done { color: var(--paid); }
+.pay-meter { margin: 10px 0 14px; }
+.pay-form { display: grid; grid-template-columns: 1.1fr 1fr 1fr 1.4fr; gap: 10px; align-items: end; }
+.pay-form label { display: grid; gap: 5px; font-weight: 600; font-size: 13px; } .pay-form label em { font-style: normal; font-weight: 400; color: var(--ink-3); }
+.pay-form input, .pay-form select { border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; background: var(--field); color: var(--ink); width: 100%; font-weight: 400; }
+.pay-form input:focus, .pay-form select:focus { outline: 0; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+.pay-actions { grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.pay-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; }
+.pay-list li { display: grid; grid-template-columns: 110px 1fr auto auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 10px; background: var(--hover); font-size: 13.5px; }
+.pay-list li > span { color: var(--ink-2); min-width: 0; }
+.hist-row td { background: var(--hover); } .hist-row .pay-list li { grid-template-columns: 1fr 2fr 1fr; background: var(--surface); }
+.pay-note, .pay-hint { margin: 10px 0 0; font-size: 12.5px; color: var(--ink-3); }
+.pay-hint { padding: 10px 12px; border-radius: 10px; background: var(--brand-soft); color: var(--ink-2); margin: 0; }
+.notice-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; margin-bottom: 14px; border-radius: 13px; background: var(--pending-soft); color: var(--pending-ink); }
+.notice-bar span { flex: 1; min-width: 200px; font-size: 13.5px; }
+
+.permit-box { border: 1px dashed var(--line); border-radius: 14px; padding: 14px 16px; margin: 6px 0 14px; }
+.permit-box h4 { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 15px; } .permit-box .panel-head { margin-bottom: 10px; }
+.permit-box .calc-form { margin-bottom: 0; }
+.notes-field { display: grid; gap: 6px; font-weight: 600; font-size: 13.5px; } .notes-field em { font-style: normal; font-weight: 400; color: var(--ink-3); }
+.notes-field input { border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px; background: var(--field); color: var(--ink); font-weight: 400; }
+.calc-save { display: flex; justify-content: flex-end; margin-top: 14px; }
+.permit-alert { border-left: 4px solid var(--pending); }
+.permit-alert h3 { display: flex; align-items: center; gap: 8px; }
+.link-name { cursor: pointer; } .link-name:hover { color: var(--brand); text-decoration: underline; }
+.clear-x { border: 0; background: none; color: var(--ink-3); cursor: pointer; display: grid; place-items: center; padding: 4px; }
+.expense-form { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; }
+.expense-form .swap { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
+.page-gap > * + * { margin-top: 16px; }
+
+@media (max-width: 760px) {
+  .pay-form { grid-template-columns: 1fr 1fr; } .pay-list li { grid-template-columns: 1fr auto auto; } .pay-list li > span:nth-child(2) { grid-column: 1 / -1; order: 3; }
+  .expense-form { grid-template-columns: 1fr; }
+}
+.view-all { display: flex; justify-content: center; margin-top: 10px; }
+tr.clickable { cursor: pointer; } tr.clickable:hover td { background: var(--hover); }
+
+/* ---------- Work & calculators: mobile ---------- */
+.form input, .form select, .form textarea, .notes-field input { min-width: 0; max-width: 100%; }
+.calc-stat b { overflow-wrap: anywhere; }
+.followup li { flex-wrap: wrap; }
+@media (max-width: 760px) {
+  .work-table, .work-table tbody { display: block; width: 100%; }
+  .work-table thead { display: none; }
+  .work-table tr { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .work-table tr:last-child { border-bottom: 0; }
+  .work-table td { display: block; padding: 0; border: 0; min-width: 0; text-align: left; }
+  .work-table td.r { text-align: left; }
+  .work-table td:first-child, .work-table td:nth-child(4), .work-table td:nth-child(5), .work-table .hist-row td { grid-column: 1 / -1; }
+  .work-table td[data-label]::before { content: attr(data-label); display: block; font-size: 11.5px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 2px; }
+  .work-table .row-actions { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 8px; margin-top: 6px; }
+  .work-table .hist-row { display: block; padding: 10px 12px; border-radius: 12px; background: var(--hover); }
+  .work-table .hist-row .pay-list li { grid-template-columns: 1fr; gap: 2px; }
+  .work-table .table-wrap, .table-wrap:has(.work-table) { overflow-x: visible; }
+  .calc-save .btn, .calc-save button { width: 100%; justify-content: center; }
+  .permit-box { padding: 12px; }
+  .permit-box .panel-head { flex-direction: column; align-items: flex-start; }
+  .toolbar-right, .toolbar-right .search { width: 100%; } .toolbar-right .search input { width: 100%; min-width: 0; }
+  .toolbar > .segmented { width: 100%; }
+}
+
+/* ---------- Fix: page wider than the phone screen (horizontal scrollbar) ----------
+   .content is a grid; its single implicit column grew to the widest child's min-content width, which pushed
+   everything past the screen edge. A shrinkable column (minmax(0, 1fr)) lets every child fit the screen instead. */
+.content { grid-template-columns: minmax(0, 1fr); }
+.content > *, main, .page-gap, .page-gap > * { min-width: 0; max-width: 100%; }
+html, body { max-width: 100%; overflow-x: clip; }
+.page-head > *, .panel-head > * { min-width: 0; }
+.page-head p, .panel-head p, .hint, .pay-hint { overflow-wrap: anywhere; }
+.calc-stats { grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); }
+@media (max-width: 640px) {
+  .calc-stats { grid-template-columns: 1fr 1fr; }
+  .calc-stat { padding: 11px 12px; } .calc-stat b { font-size: 17px; }
+}

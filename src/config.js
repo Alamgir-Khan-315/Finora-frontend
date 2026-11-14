@@ -2,13 +2,16 @@
 // The app tries the ONLINE backend first and uses the LOCAL server only if the online one is not available.
 const env = import.meta.env;
 const clean = u => String(u || "").trim().replace(/\/+$/, "");
-export const ONLINE_API = clean(env.VITE_API_URL) || "https://finora-backend-lilac.vercel.app/api";
+export const ONLINE_API = clean(env.VITE_API_URL) || "https://finora-4-zentro-by-hmc-backend.vercel.app/api";
 export const LOCAL_API = clean(env.VITE_LOCAL_API_URL) || "http://localhost:5000/api";
-const CANDIDATES = [[ONLINE_API, "Online server"], [LOCAL_API, "Local server"]].filter(([u], i, a) => a.findIndex(x => x[0] === u) === i);
+// The local server is only tried when the website itself runs on this computer. On the live site it would just trigger a
+// "access devices on your network" prompt in Chrome and can never work for other visitors.
+const onThisComputer = typeof location !== "undefined" && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+const CANDIDATES = [[ONLINE_API, "Online server"], ...(onThisComputer ? [[LOCAL_API, "Local server"]] : [])].filter(([u], i, a) => a.findIndex(x => x[0] === u) === i);
 
 let active = null;       // { url, label, dbReady, reason }
 let problem = "";        // why no server could be used, shown to the user
-const MIN_VERSION = 3;   // backends older than this have no expenses/settings routes
+const MIN_VERSION = 4;   // backends older than this have no part payments / work orders
 let resolving = null;
 export const getActiveServer = () => active;
 
@@ -29,7 +32,7 @@ export function resolveServer(force = false) {
   resolving ??= Promise.all(CANDIDATES.map(probe)).then(found => {
     const alive = found.filter(s => !s.down && !s.outdated);
     active = alive.find(s => s.dbReady) || alive[0] || null;
-    problem = active ? "" : found.map(s => s.down ? `${s.label}: not reachable.` : s.outdated ? `${s.label}: running an OLD version of the backend (no expenses). Redeploy the latest Finora-backend.` : "").filter(Boolean).join(" ");
+    problem = active ? "" : found.map(s => s.down ? `${s.label}: not reachable.` : s.outdated ? `${s.label}: running an OLD version of the backend (no part payments / work orders). Redeploy the latest backend on Vercel.` : "").filter(Boolean).join(" ");
     return active;
   }).finally(() => { resolving = null; });
   return resolving;
@@ -47,7 +50,7 @@ async function send(base, path, options) {
   return body;
 }
 
-const noServer = () => `${problem || "No server found."} Start the local backend (npm run dev in Finora-backend) or fix the online one.`;
+const noServer = () => `${problem || "No server found."} Check the backend deployment on Vercel (MONGODB_URI and the Atlas Network Access list).`;
 
 export async function apiRequest(path, options = {}) {
   let server = await resolveServer();

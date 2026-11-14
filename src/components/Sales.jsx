@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Search, Eye, Check, Download, Plus } from "lucide-react";
-import { money, fmtDate, STATUSES, dueText, toCsv, downloadText, RANGES } from "../lib";
+import { money, fmtDate, STATUSES, dueText, toCsv, downloadText, RANGES, isOpen, siteOf } from "../lib";
 import { Status, Button, Empty, Segmented } from "./ui";
 
 export default function Sales({ rows, range, setRange, onOpen, onMarkPaid, onAdd, initialQuery = "" }) {
@@ -13,7 +13,7 @@ export default function Sales({ rows, range, setRange, onOpen, onMarkPaid, onAdd
   const shown = useMemo(() => rows.filter(x => (tab === "All" || x.status === tab) &&
     (method === "All" || x.method === method) &&
     (!from || x.date >= new Date(from + "T00:00:00")) && (!to || x.date <= new Date(to + "T23:59:59")) &&
-    [x.id, x.customer, x.service, x.status].join(" ").toLowerCase().includes(q.trim().toLowerCase())), [rows, tab, q, method, from, to]);
+    [x.id, x.customer, x.service, x.status, x.house, x.address, x.customerPhone].join(" ").toLowerCase().includes(q.trim().toLowerCase())), [rows, tab, q, method, from, to]);
 
   const rangeLabel = RANGES.find(r => r[0] === range)[1];
   return <><div className="toolbar dash-bar"><Segmented label="Period" value={range} onChange={setRange} options={[["all", "All data"], ...RANGES.filter(r => r[0] !== "all")]} /></div>
@@ -27,7 +27,7 @@ export default function Sales({ rows, range, setRange, onOpen, onMarkPaid, onAdd
         <label className="filter"><span>From</span><input type="date" value={from} max={to || undefined} onChange={e => setFrom(e.target.value)} /></label>
         <label className="filter"><span>To</span><input type="date" value={to} min={from || undefined} onChange={e => setTo(e.target.value)} /></label>
         <label className="filter"><span>Method</span><select value={method} onChange={e => setMethod(e.target.value)}><option>All</option>{methods.map(m => <option key={m}>{m}</option>)}</select></label>
-        <label className="search"><Search size={16} /><input placeholder="Search invoice, customer, service" value={q} onChange={e => setQ(e.target.value)} /></label>
+        <label className="search"><Search size={16} /><input placeholder="Search invoice, customer, house, address" value={q} onChange={e => setQ(e.target.value)} /></label>
         <Button kind="outline" onClick={() => downloadText(`sales-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(shown))} disabled={!shown.length}><Download size={15} />Export CSV</Button>
       </div>
     </div>
@@ -39,14 +39,14 @@ export default function Sales({ rows, range, setRange, onOpen, onMarkPaid, onAdd
         <thead><tr><th>Invoice</th><th>Customer</th><th>Issued</th><th>Due</th><th className="r">Amount</th><th>Status</th><th className="r">Actions</th></tr></thead>
         <tbody>{shown.map(r => <tr key={r.id} className="clickable" onClick={() => onOpen(r)}>
           <td><b>{r.id}</b></td>
-          <td>{r.customer}<small>{r.service}</small></td>
+          <td>{r.customer}<small>{r.service}</small>{siteOf(r) && <small>{siteOf(r)}</small>}</td>
           <td>{fmtDate(r.date)}</td>
           <td>{r.dueDate ? fmtDate(r.dueDate) : "—"}{dueText(r) && <small className={r.daysLate ? "late" : ""}>{dueText(r)}</small>}</td>
-          <td className="r num"><b>{money(r.amount)}</b></td>
+          <td className="r num"><b>{money(r.amount)}</b>{r.paidAmount > 0 && r.balance > 0 && <small>Received {money(r.paidAmount)} · Left {money(r.balance)}</small>}</td>
           <td><Status value={r.status} /></td>
           <td className="r" onClick={e => e.stopPropagation()}>
             <div className="row-actions">
-              {onMarkPaid && (r.status === "Pending" || r.status === "Overdue") && <Button kind="ghost" onClick={() => onMarkPaid(r)} title="Mark as paid"><Check size={15} />Paid</Button>}
+              {onMarkPaid && isOpen(r) && <Button kind="ghost" onClick={() => onMarkPaid(r)} title="Mark the remaining amount as paid"><Check size={15} />Paid</Button>}
               <Button kind="outline" onClick={() => onOpen(r)}><Eye size={15} />Invoice</Button>
             </div>
           </td>

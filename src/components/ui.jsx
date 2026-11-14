@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 export function Status({ value }) {
@@ -15,7 +16,11 @@ export function Modal({ title, subtitle, onClose, children, actions, wide }) {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
-  return (
+  // Keep the page behind the pop-up from scrolling while it is open.
+  useEffect(() => { const old = document.body.style.overflow; document.body.style.overflow = "hidden"; return () => { document.body.style.overflow = old; }; }, []);
+  // Rendered straight into <body> so it is always centred on the phone / laptop screen. Inside the page, the page-enter
+  // animation made "position: fixed" relative to the page (not the screen), which put the pop-up in the middle of a long page.
+  return createPortal(
     <div className="backdrop" onMouseDown={onClose}>
       <div className={`modal ${wide ? "modal-wide" : ""}`} role="dialog" aria-modal="true" aria-label={title} onMouseDown={e => e.stopPropagation()}>
         <div className="modal-head">
@@ -25,7 +30,8 @@ export function Modal({ title, subtitle, onClose, children, actions, wide }) {
         <div className="modal-body">{children}</div>
         {actions && <div className="modal-actions">{actions}</div>}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
