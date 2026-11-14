@@ -19,7 +19,7 @@ Income is counted in the month an invoice is marked **Paid**; expenses in the mo
     cd Finora-frontend && npm install && npm run dev    # http://localhost:5173
 
 ## Which server is used
-The app talks to the **online** backend `https://finora-4-zentro-by-hmc-backend.vercel.app/api`. On localhost only, it falls back to `http://localhost:5000/api`
+The app talks to the **online** backend `https://finora-backend-lilac.vercel.app/api`. On localhost only, it falls back to `http://localhost:5000/api`
 if the online one is down. The sidebar shows which one is active. Override with `VITE_API_URL` / `VITE_LOCAL_API_URL` (see `.env.example`) before building.
 Needs backend **v4** (`/api/health` shows the version); an older backend shows a clear "redeploy the backend" message.
 

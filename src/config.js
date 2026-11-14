@@ -2,7 +2,7 @@
 // The app tries the ONLINE backend first and uses the LOCAL server only if the online one is not available.
 const env = import.meta.env;
 const clean = u => String(u || "").trim().replace(/\/+$/, "");
-export const ONLINE_API = clean(env.VITE_API_URL) || "https://finora-4-zentro-by-hmc-backend.vercel.app/api";
+export const ONLINE_API = clean(env.VITE_API_URL) || "https://finora-backend-lilac.vercel.app/api";
 export const LOCAL_API = clean(env.VITE_LOCAL_API_URL) || "http://localhost:5000/api";
 // The local server is only tried when the website itself runs on this computer. On the live site it would just trigger a
 // "access devices on your network" prompt in Chrome and can never work for other visitors.
