@@ -46,7 +46,7 @@ export default function Sales({ rows, range, setRange, onOpen, onMarkPaid, onAdd
           <td><Status value={r.status} /></td>
           <td className="r" onClick={e => e.stopPropagation()}>
             <div className="row-actions">
-              {onMarkPaid && isOpen(r) && <Button kind="ghost" onClick={() => onMarkPaid(r)} title="Mark the remaining amount as paid"><Check size={15} />Paid</Button>}
+              {onMarkPaid && isOpen(r) && <Button kind="success" onClick={() => onMarkPaid(r)} title="Mark the remaining amount as paid"><Check size={15} />Paid</Button>}
               <Button kind="outline" onClick={() => onOpen(r)}><Eye size={15} />Invoice</Button>
             </div>
           </td>

@@ -61,7 +61,7 @@ export async function renderInvoiceImage(inv, company = "Finora Services") {
   text(open ? L.due : inv.status === "Paid" ? L.paid : "Cancelled", W - M - 300, by + 40, `500 16px ${FONT}`, "#c8cee0");
   text(money(due || inv.amount), W - M - 20, by + 42, `700 26px ${HEAD}`, "#fff", "right");
 
-  if (notes.length) { const ny = ty + 290 + extraRow; text("Notes", M, ny, `500 14px ${FONT}`, soft); notes.forEach((l, i) => text(l, M, ny + 28 + i * 26, `400 17px ${FONT}`, ink)); }
+  if (notes.length) { const ny = ty + 290 + extraRow; text("Description", M, ny, `500 14px ${FONT}`, soft); notes.forEach((l, i) => text(l, M, ny + 28 + i * 26, `400 17px ${FONT}`, ink)); }
   if (inv.status === "Paid" || part) { g.save(); g.translate(M + 130, ty + 240); g.rotate(-0.21); g.globalAlpha = .22; g.strokeStyle = statusColor; g.lineWidth = 5; rr(-105, -42, 210, 74, 12); g.stroke(); text(part ? "PARTIAL" : "PAID", 0, 14, `800 ${part ? 40 : 52}px ${HEAD}`, statusColor, "center"); g.restore(); }
 
   // footer

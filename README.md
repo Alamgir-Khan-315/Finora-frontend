@@ -28,8 +28,21 @@ Needs backend **v4** (`/api/health` shows the version); an older backend shows a
 - **Part payments**: open an invoice > *Payments* > record any amount. Status goes Pending → **Partial** → **Paid** automatically; the Paid stamp appears when fully received. Income reports count each payment in the month it was received.
 - **WhatsApp update to the customer** after every payment / invoice change (automatic if the backend has the WhatsApp API keys, otherwise one tap on *Send on WhatsApp*).
 - **Expenses**: *Paid to* (employee / seller) with type, a **search box** (name, title, category) and a **Spending by person** table with the total spent on each.
-- **Work & calculators**: the currency, loan (EMI) and investment calculators are removed. New **construction calculator**: rate per sq ft × area = amount to pay the employee, saved as a work order.
-- **Working permissions**: permission no., start and due date per work. Permissions expiring this month (or within 30 days) or already expired show in the dashboard follow-up, in the bell alerts and on the Work page, with a **Renew** form that keeps the old dates in history.
 
-- **Bills to pay** (Expenses > Bills to pay): money you owe to an employee / seller, paid in parts like invoices, with a payment slip (PDF / picture) and WhatsApp updates to that person. Every payment counts as an expense. A work order can be turned into a bill with the *Bill* button.
+- **Bills to pay** (Expenses > Bills to pay): money you owe to an employee / seller, paid in parts like invoices, with a payment slip (PDF / picture) and WhatsApp updates to that person. Every payment counts as an expense.
 - Expenses page: *Spending by person* comes first (top 5, *View all*), the monthly budget shows only the most used categories (*View all categories*), and the expense list shows the latest 8 (*View all*).
+
+## Phone app layout
+On phones (up to 760 px wide) the menu is a bottom tab bar (Home, Sales, Customers, Expenses, Contact) with a red badge for overdue invoices; "New sale" is a floating + button; lists are cards; pop-ups slide up as sheets; safe areas for the iPhone notch / home bar are respected. Pinch and double-tap zoom are switched off (`src/mobile.js`, viewport tag) and inputs use 16 px text so iPhone Safari never zooms on focus.
+Every form has a **Description** field (sale, expense, bill, payment, renewal) for extra information.
+
+## Latest changes
+- **Invoice**: the "download as picture" button is replaced by **Print** (prints only the invoice). PDF download stays.
+- **Customers**: tap a customer for a profile screen (contact buttons, totals, all their invoices, *Download Excel*, *Send payment reminder*). The list has a general *Download Excel* (customers + all invoices).
+- **Expense profiles** (Expenses > Profiles): every category is a profile, like a customer. Create your own (Home, Office, Site A...) from *New profile* or while adding an expense / bill (*＋ New profile…* in the category list). Open a profile to see its expenses, bills to pay, add an expense, and *Download Excel*.
+- Excel files are real .xlsx (made in the browser, no extra library).
+
+
+- **Contact me** tab (replaces Work & permissions): About me + Contact me with **Visit profile**, **Contact** (call) and **WhatsApp** buttons for people who want a website or software. Details live in `src/contact.js`.
+- **Portfolio link is locked**: Settings shows it but cannot change it, and the server always returns the fixed link.
+- **Delete profile** (Expenses > Profiles) is now inside the blue profile card, separate from Download Excel.

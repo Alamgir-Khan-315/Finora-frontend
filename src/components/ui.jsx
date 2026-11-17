@@ -6,8 +6,8 @@ export function Status({ value }) {
   return <span className={`status status-${value.toLowerCase()}`}><i />{value}</span>;
 }
 
-export function Button({ kind = "primary", children, ...props }) {
-  return <button className={`btn btn-${kind}`} {...props}>{children}</button>;
+export function Button({ kind = "primary", className = "", children, ...props }) {
+  return <button className={`btn btn-${kind} ${className}`.trim()} {...props}>{children}</button>;
 }
 
 export function Modal({ title, subtitle, onClose, children, actions, wide }) {
