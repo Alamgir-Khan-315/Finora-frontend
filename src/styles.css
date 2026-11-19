@@ -482,12 +482,12 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; touch-action: man
   /* menu moves to the bottom, like WhatsApp */
   .side, .scrim { display: none !important; }
   .top .burger { display: none !important; }
-  .tabbar { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  .tabbar { display: grid; grid-template-columns: repeat(6, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
     padding: 6px max(6px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
     background: color-mix(in srgb, var(--surface) 90%, transparent); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--line); }
   .tabbar button { position: relative; display: grid; justify-items: center; align-content: center; gap: 2px; min-height: 52px; padding: 2px 0; border: 0; background: none;
-    color: var(--ink-3); font-size: 11px; font-weight: 600; letter-spacing: .1px; border-radius: 12px; }
-  .tabbar .ti { width: 54px; height: 30px; border-radius: 15px; display: grid; place-items: center; transition: background .18s, color .18s; }
+    color: var(--ink-3); font-size: 10.5px; font-weight: 600; letter-spacing: 0; border-radius: 12px; white-space: nowrap; }
+  .tabbar .ti { width: 46px; height: 30px; border-radius: 15px; display: grid; place-items: center; transition: background .18s, color .18s; }
   .tabbar button.on { color: var(--brand); } .tabbar button.on .ti { background: var(--brand-soft); }
   .tabbar button:active .ti { transform: scale(.94); }
   .tab-badge { position: absolute; top: 0; left: calc(50% + 8px); min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--overdue); color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; border: 2px solid var(--surface); box-sizing: content-box; }
@@ -627,10 +627,6 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; touch-action: man
 .icon-btn.on { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
 
 
-/* ---------- Delete profile (inside the blue profile card) ---------- */
-.profile-head-action { display: flex; justify-content: flex-start; }
-.profile-delete { color: #fff; background: rgba(255,255,255,.16); border: 1.5px solid rgba(255,255,255,.55); box-shadow: none; }
-.profile-delete:hover:not(:disabled) { background: #e5484d; border-color: #e5484d; color: #fff; transform: translateY(-1px); box-shadow: 0 8px 18px rgba(229,72,77,.4); }
 
 /* ---------- About me / Contact me ---------- */
 .contact-page { display: grid; gap: 16px; min-width: 0; }
@@ -647,4 +643,23 @@ a.btn { text-decoration: none; }
 .contact-list .ci { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--brand-soft); color: var(--brand); }
 .contact-list div { display: grid; gap: 1px; min-width: 0; } .contact-list small { color: var(--ink-3); font-size: 12px; } .contact-list b { overflow-wrap: anywhere; }
 .foot-links { display: inline-flex; flex-wrap: wrap; gap: 8px; }
-@media (max-width: 760px) { .contact-cta .btn { flex: 1 1 100%; } .profile-head-action .btn { width: 100%; } }
+@media (max-width: 760px) { .contact-cta .btn { flex: 1 1 100%; } }
+
+/* ---------- Delete profile: pill at the top-right of the profile screen ---------- */
+.profile-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
+.profile-delete { display: inline-flex; align-items: center; gap: 8px; padding: 4px 14px 4px 4px; border-radius: 999px; border: 1.5px solid color-mix(in srgb, var(--overdue) 35%, transparent); background: color-mix(in srgb, var(--overdue) 11%, var(--surface)); color: var(--overdue); font-weight: 650; font-size: 14px; white-space: nowrap; transition: background .15s, transform .12s, box-shadow .2s; }
+.profile-delete .pd-ico { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--overdue); color: #fff; }
+.profile-delete:hover { background: color-mix(in srgb, var(--overdue) 20%, var(--surface)); transform: translateY(-1px); box-shadow: 0 6px 14px color-mix(in srgb, var(--overdue) 25%, transparent); }
+.profile-delete:active { transform: scale(.97); }
+
+/* ---------- About Finora / developer tiles ---------- */
+.about-page { display: grid; gap: 16px; min-width: 0; }
+.about-logo { width: 68px; height: 68px; border-radius: 22px; display: grid; place-items: center; background: rgba(255,255,255,.2); }
+.about-features { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.about-features li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.about-features .ci { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--brand-soft); color: var(--brand); }
+.about-features b { display: block; margin-bottom: 3px; } .about-features p { margin: 0; color: var(--ink-2); font-size: 13.5px; line-height: 1.5; }
+.about-points { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; color: var(--ink-2); line-height: 1.55; font-size: 14px; } .about-points b { color: var(--ink); }
+.about-points .with-ic { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; } .about-points .with-ic svg { color: var(--brand); margin-top: 3px; }
+.dev-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 760px) { .about-features { grid-template-columns: 1fr; } }

@@ -346,7 +346,7 @@ function Profiles({ categories, expenses, bills, people, selected, setSelected, 
     ]);
     return <Profile onBack={() => { setSelected(null); setQ(""); setView("expenses"); }} backLabel="All profiles" avatar={selected[0].toUpperCase()} title={selected} subtitle="Everything you spent under this profile"
       stats={[["Total spent", money(st.total)], ["This month", money(st.month)], ["Entries", st.count], ["Bills to pay", st.toPay ? money(st.toPay) : "—", st.toPay ? "bad" : ""]]}
-      headAction={selected !== "Other" && <button type="button" className="btn profile-delete" onClick={() => del(selected, st.count + myBills.length)}><Trash2 size={15} />Delete profile</button>}
+      topAction={selected !== "Other" && <button type="button" className="profile-delete" onClick={() => del(selected, st.count + myBills.length)}><span className="pd-ico"><Trash2 size={14} /></span>Delete profile</button>}
       actions={<><Button onClick={() => setAddExp(true)}><Plus size={15} />Add expense</Button><Button kind="outline" onClick={excel} disabled={!rows.length && !myBills.length}><Download size={15} />Download Excel</Button></>}>
       <section className="panel">
         <div className="panel-head"><div><h3>{view === "expenses" ? "Expenses" : "Bills to pay"}</h3><p>{view === "expenses" ? `${shown.length} ${shown.length === 1 ? "entry" : "entries"} · ${money(shown.reduce((a, r) => a + Number(r.amount), 0))}` : `${myBills.length} ${myBills.length === 1 ? "bill" : "bills"} in this profile. Tap one to pay or send an update.`}</p></div>

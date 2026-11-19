@@ -3,7 +3,7 @@
 // Add `email` or more `links` below if you want them to appear on the Contact me page.
 export const CONTACT = {
   name: "Alamgir Khan",
-  role: "Frontend Web Developer",
+  role: "Full Stack Developer",
   phone: "03154572266",
   portfolio: "https://portfolio-web-psi-rosy.vercel.app/",
   email: "",

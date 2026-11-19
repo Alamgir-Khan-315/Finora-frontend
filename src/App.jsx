@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { LayoutDashboard, ReceiptText, Users, Settings as Cog, Plus, Menu, X, RefreshCw, AlertCircle, CheckCircle2, Sun, Moon, ArrowUpRight, UserRound, Phone, Wallet } from "lucide-react";
+import { LayoutDashboard, ReceiptText, Users, Settings as Cog, Plus, Menu, X, RefreshCw, AlertCircle, CheckCircle2, Sun, Moon, ArrowUpRight, UserRound, Phone, Wallet, Info } from "lucide-react";
 import { apiRequest, resolveServer } from "./config";
 import { normalize, normalizeBill, billExpenseRows, dateInRange } from "./lib";
 import { openChatWithText } from "./whatsapp";
@@ -11,22 +11,24 @@ import InvoiceModal from "./components/InvoiceModal";
 import SaleForm from "./components/SaleForm";
 import Logo from "./components/Logo";
 import Contact from "./components/Contact";
+import About from "./components/About";
 import { CONTACT, CONTACT_TEL } from "./contact";
 import Expenses, { budgetStatus, DEFAULT_CATEGORIES } from "./components/Expenses";
 import Notifications from "./components/Notifications";
 import Settings from "./components/Settings";
 
-const NAV = [["Dashboard", LayoutDashboard], ["Sales & invoices", ReceiptText], ["Customers", Users], ["Expenses", Wallet], ["Contact me", UserRound], ["Settings", Cog]];
+const NAV = [["Dashboard", LayoutDashboard], ["Customers", Users], ["Sales & invoices", ReceiptText], ["Expenses", Wallet], ["About Finora", Info], ["Contact (developer)", UserRound]];
 const HEAD = {
   "Dashboard": ["Dashboard", "Your sales, money received, expenses and profit at a glance."],
   "Sales & invoices": ["Sales & invoices", "Every sale with its invoice. Open one to preview or download the PDF."],
   "Customers": ["Customers", "Who you sell to and who still owes you."],
   "Expenses": ["Expenses", "Month-by-month income, spending and profit or loss."],
-  "Contact me": ["About & contact", "Who made Finora, and how to get a website or software made for your business."],
+  "About Finora": ["About Finora", "What Finora is and what it can do for your business."],
+  "Contact (developer)": ["Contact (developer)", "Who made Finora, and how to get a website or software made for your business."],
   "Settings": ["Settings", "Business details shown on your invoices."]
 };
 // Short names for the phone tab bar (like WhatsApp: icon + small label at the bottom).
-const TAB_LABEL = { "Dashboard": "Home", "Sales & invoices": "Sales", "Customers": "Customers", "Expenses": "Expenses", "Contact me": "Contact", "Settings": "Settings" };
+const TAB_LABEL = { "Dashboard": "Home", "Sales & invoices": "Invoices", "Customers": "Customers", "Expenses": "Expenses", "About Finora": "About", "Contact (developer)": "Contact", "Settings": "Settings" };
 
 export default function App() {
   const [page, setPage] = useState("Dashboard");
@@ -184,8 +186,8 @@ export default function App() {
         <div className="top-actions">
           <button className="icon-btn theme-toggle" onClick={() => setTheme(t => t === "dark" ? "light" : "dark")} aria-label={theme === "dark" ? "Switch to day mode" : "Switch to night mode"} title={theme === "dark" ? "Day mode" : "Night mode"}><Sun className="sun" size={18} /><Moon className="moon" size={17} /></button>
           <Notifications invoices={all} budgets={budgetLevels} onOpenInvoice={r => setOpenId(r.id)} goExpenses={() => go("Expenses")} />
-          <button className={`icon-btn ${page === "Settings" ? "on" : ""}`} onClick={() => go("Settings")} aria-label="Settings" title="Settings"><Cog size={18} /></button>
           <button className="icon-btn" onClick={load} aria-label="Refresh data" title="Refresh"><RefreshCw size={17} className={loading ? "spin" : ""} /></button>
+          <button className={`icon-btn ${page === "Settings" ? "on" : ""}`} onClick={() => go("Settings")} aria-label="Settings" title="Settings"><Cog size={18} /></button>
           <Button className="new-sale" onClick={() => setForm(true)} disabled={!loaded}><Plus size={16} /><span className="btn-text">New sale</span></Button>
         </div>
       </header>
@@ -204,7 +206,8 @@ export default function App() {
           {page === "Customers" && <Customers rows={all} onOpen={r => setOpenId(r.id)} />}
           {page === "Expenses" && <Expenses sales={all} expenses={expenseRows} bills={billRows} budgets={budgets} people={people} categories={categories} onAddCategory={addCategory} onDeleteCategory={deleteCategory} onAddBill={saveBill} onOpenBill={b => setOpenId(b.id)} onAdd={addExpense} onRemove={removeExpense} onSetLimit={setLimit} notify={notify} />}
           {page === "Settings" && <Settings business={business} onSave={saveBusiness} />}
-          {page === "Contact me" && <Contact />}
+          {page === "About Finora" && <About />}
+          {page === "Contact (developer)" && <Contact />}
         </>}
       </div>
       <footer className="foot">

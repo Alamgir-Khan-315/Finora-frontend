@@ -16,9 +16,15 @@ export default function Contact() {
       </div>
     </section>
 
+    <div className="dev-tiles">
+      <div className="pstat"><small>Role</small><b>Full Stack</b></div>
+      <div className="pstat"><small>Built</small><b>Finora</b></div>
+      <div className="pstat"><small>Stack</small><b>MERN</b></div>
+    </div>
+
     <div className="grid-2">
       <section className="panel">
-        <div className="panel-head"><div><h3>About me</h3><p>Who is behind Finora</p></div></div>
+        <div className="panel-head"><div><h3>About me</h3><p>The developer behind Finora</p></div></div>
         <p className="about-text">I am <b>{CONTACT.name}</b>, a {CONTACT.role.toLowerCase()}. I made Finora, and I build websites and software for businesses. See my portfolio to find out more about my work.</p>
         <a className="btn btn-outline" href={CONTACT.portfolio} target="_blank" rel="noopener noreferrer"><UserRound size={16} />See my portfolio<ArrowUpRight size={15} /></a>
       </section>

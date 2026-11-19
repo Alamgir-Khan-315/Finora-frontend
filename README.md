@@ -33,7 +33,7 @@ Needs backend **v4** (`/api/health` shows the version); an older backend shows a
 - Expenses page: *Spending by person* comes first (top 5, *View all*), the monthly budget shows only the most used categories (*View all categories*), and the expense list shows the latest 8 (*View all*).
 
 ## Phone app layout
-On phones (up to 760 px wide) the menu is a bottom tab bar (Home, Sales, Customers, Expenses, Contact) with a red badge for overdue invoices; "New sale" is a floating + button; lists are cards; pop-ups slide up as sheets; safe areas for the iPhone notch / home bar are respected. Pinch and double-tap zoom are switched off (`src/mobile.js`, viewport tag) and inputs use 16 px text so iPhone Safari never zooms on focus.
+On phones (up to 760 px wide) the menu is a bottom tab bar (Home, Customers, Invoices, Expenses, About, Contact) with a red badge for overdue invoices; "New sale" is a floating + button; lists are cards; pop-ups slide up as sheets; safe areas for the iPhone notch / home bar are respected. Pinch and double-tap zoom are switched off (`src/mobile.js`, viewport tag) and inputs use 16 px text so iPhone Safari never zooms on focus.
 Every form has a **Description** field (sale, expense, bill, payment, renewal) for extra information.
 
 ## Latest changes
@@ -43,6 +43,8 @@ Every form has a **Description** field (sale, expense, bill, payment, renewal) f
 - Excel files are real .xlsx (made in the browser, no extra library).
 
 
-- **Contact me** tab (replaces Work & permissions): About me + Contact me with **Visit profile**, **Contact** (call) and **WhatsApp** buttons for people who want a website or software. Details live in `src/contact.js`.
+- **Menu order**: Dashboard, Customers, Invoices, Expenses, About Finora, Contact (developer). The Settings button is the last icon in the top bar, after Refresh.
+- **About Finora** tab: what the app is and what it does.
+- **Contact (developer)** tab: About me + Contact me with **Visit profile**, **Contact** (call) and **WhatsApp** buttons for people who want a website or software. Details live in `src/contact.js`.
 - **Portfolio link is locked**: Settings shows it but cannot change it, and the server always returns the fixed link.
-- **Delete profile** (Expenses > Profiles) is now inside the blue profile card, separate from Download Excel.
+- **Delete profile** (Expenses > Profiles) is a pill at the top-right of the profile screen, next to *All profiles*.
