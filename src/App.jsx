@@ -1,11 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-
 import { LayoutDashboard, ReceiptText, Users, Settings as Cog, Plus, RefreshCw, AlertCircle, CheckCircle2, Sun, Moon, ArrowUpRight, Wallet, Info, UserRound, Phone } from "lucide-react";
 import { apiRequest, resolveServer, DEVELOPER } from "./config";
 import { normalize, normalizeBill, billExpenseRows, dateInRange } from "./lib";
-import { LayoutDashboard, ReceiptText, Users, Settings as Cog, Plus, RefreshCw, AlertCircle, CheckCircle2, Sun, Moon, ArrowUpRight, Calculator, Wallet, Info, UserRound, Phone } from "lucide-react";
-import { apiRequest, resolveServer, DEVELOPER } from "./config";
-import { normalize, normalizeWork, normalizeBill, billExpenseRows, dateInRange, num } from "./lib";
 import { openChatWithText } from "./whatsapp";
 import { Button, Clock } from "./components/ui";
 import Dashboard from "./components/Dashboard";
