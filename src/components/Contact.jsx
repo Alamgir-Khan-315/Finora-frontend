@@ -1,43 +1,27 @@
 import React from "react";
-import { Phone, MessageCircle, ArrowUpRight, Globe, Mail, Link2, UserRound } from "lucide-react";
-import { CONTACT, CONTACT_TEL, CONTACT_WA } from "../contact";
+import { ArrowUpRight, MessageCircle, Mail, Globe, Smartphone, Wrench } from "lucide-react";
+import { DEVELOPER } from "../config";
+import { waNumber } from "../lib";
+import { Button } from "./ui";
 
-// "About me" and "Contact me": who made Finora, and how to order a website or software.
-export default function Contact() {
-  return <div className="contact-page">
-    <section className="profile-head contact-hero">
-      <span className="profile-avatar">AK</span>
-      <div className="profile-id"><h2>{CONTACT.name}</h2><p>{CONTACT.role}</p></div>
-      <p className="contact-pitch">Need a website or software for your business? I can build it for you.</p>
-      <div className="contact-cta">
-        <a className="btn btn-light" href={CONTACT.portfolio} target="_blank" rel="noopener noreferrer"><Globe size={16} />Visit profile<ArrowUpRight size={15} /></a>
-        <a className="btn btn-light" href={CONTACT_TEL}><Phone size={16} />Contact</a>
-        <a className="btn btn-wa" href={CONTACT_WA} target="_blank" rel="noopener noreferrer"><MessageCircle size={16} />WhatsApp</a>
+const SERVICES = [[Globe, "Websites", "A website or landing page for your business."], [Smartphone, "Business apps", "Apps like Finora, made around how you work."], [Wrench, "Custom tools", "Calculators, reports and dashboards for your daily work."]];
+
+export default function Contact({ portfolio }) {
+  const wa = waNumber(DEVELOPER.whatsapp);
+  const link = (href, icon, text, kind = "outline") => <a className={`btn btn-${kind}`} href={href} target="_blank" rel="noopener noreferrer">{icon}{text}</a>;
+  return <>
+    <section className="panel contact-hero">
+      <span className="contact-avatar">{DEVELOPER.name}</span>
+      <div><h3>Made by {DEVELOPER.name}</h3><p>Finora was designed and built by {DEVELOPER.name}. Want a website or software for your own business? Get in touch.</p></div>
+      <div className="contact-actions">
+        {link(portfolio, <ArrowUpRight size={15} />, "Visit profile", "primary")}
+        {wa && link(`https://wa.me/${wa}`, <MessageCircle size={15} />, "WhatsApp")}
+        {DEVELOPER.email && link(`mailto:${DEVELOPER.email}`, <Mail size={15} />, "Email")}
       </div>
     </section>
-
-    <div className="dev-tiles">
-      <div className="pstat"><small>Role</small><b>Full Stack</b></div>
-      <div className="pstat"><small>Built</small><b>Finora</b></div>
-      <div className="pstat"><small>Stack</small><b>MERN</b></div>
-    </div>
-
-    <div className="grid-2">
-      <section className="panel">
-        <div className="panel-head"><div><h3>About me</h3><p>The developer behind Finora</p></div></div>
-        <p className="about-text">I am <b>{CONTACT.name}</b>, a {CONTACT.role.toLowerCase()}. I made Finora, and I build websites and software for businesses. See my portfolio to find out more about my work.</p>
-        <a className="btn btn-outline" href={CONTACT.portfolio} target="_blank" rel="noopener noreferrer"><UserRound size={16} />See my portfolio<ArrowUpRight size={15} /></a>
-      </section>
-
-      <section className="panel">
-        <div className="panel-head"><div><h3>Contact me</h3><p>For a new website or software, get in touch.</p></div></div>
-        <ul className="contact-list">
-          <li><span className="ci"><Phone size={18} /></span><div><small>Phone / WhatsApp</small><b className="num">{CONTACT.phone}</b></div><a className="btn btn-outline" href={CONTACT_TEL}>Call</a></li>
-          <li><span className="ci"><Globe size={18} /></span><div><small>Portfolio</small><b>{CONTACT.portfolio.replace(/^https?:\/\//, "").replace(/\/$/, "")}</b></div><a className="btn btn-outline" href={CONTACT.portfolio} target="_blank" rel="noopener noreferrer">Visit</a></li>
-          {CONTACT.email && <li><span className="ci"><Mail size={18} /></span><div><small>Email</small><b>{CONTACT.email}</b></div><a className="btn btn-outline" href={`mailto:${CONTACT.email}`}>Email</a></li>}
-          {CONTACT.links.map(l => <li key={l.url}><span className="ci"><Link2 size={18} /></span><div><small>{l.label}</small><b>{l.url.replace(/^https?:\/\//, "").replace(/\/$/, "")}</b></div><a className="btn btn-outline" href={l.url} target="_blank" rel="noopener noreferrer">Open</a></li>)}
-        </ul>
-      </section>
-    </div>
-  </div>;
+    <section className="panel">
+      <div className="panel-head"><div><h3>What can be made for you</h3><p>Tell the developer what your business needs.</p></div></div>
+      <div className="about-grid">{SERVICES.map(([Icon, title, text]) => <div key={title} className="about-card"><span className="about-icon"><Icon size={19} /></span><b>{title}</b><p>{text}</p></div>)}</div>
+    </section>
+  </>;
 }

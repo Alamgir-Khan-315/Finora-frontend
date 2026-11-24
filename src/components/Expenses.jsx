@@ -4,11 +4,12 @@ import { Plus, Trash2, Download, ChevronDown, ChevronUp, Wallet, TrendingUp, Tre
 import { isValidPhone, isOpen, money, fmtDate, toInputDate, toLocalDay, monthlyReport, expenseDate, paymentEvents, MONTHS_LONG } from "../lib";
 import { Button, Empty, Segmented, Status } from "./ui";
 import { exportExpenses, exportProfitLoss } from "../exports";
+import { CATEGORIES, PAYEE_TYPES, profileColor } from "../profiles";
+import Profiles from "./Profiles";
 
-export const CATEGORIES = ["Rent", "Utilities", "Salaries", "Labour", "Materials", "Permits", "Marketing", "Software", "Travel", "Supplies", "Other"];
-export const PAYEE_TYPES = ["Employee", "Seller", "Contractor", "Other"];
-const catColor = c => CAT_COLORS[Math.max(0, CATEGORIES.indexOf(c)) % CAT_COLORS.length];
+export { CATEGORIES, PAYEE_TYPES };
 const CAT_COLORS = ["var(--c1)", "var(--c2)", "var(--c3)", "var(--c4)", "var(--c5)", "var(--c6)", "var(--c7)", "var(--c8)"];
+const catColor = c => CATEGORIES.includes(c) ? CAT_COLORS[CATEGORIES.indexOf(c) % CAT_COLORS.length] : profileColor(c);
 const thisMonth = d => { const n = new Date(); return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear(); };
 const signed = n => (n > 0 ? "+" : n < 0 ? "−" : "") + money(Math.abs(n));
 
@@ -102,7 +103,8 @@ function Report({ sales, expenses, company, notify }) {
   </>;
 }
 
-function Entries({ expenses, budgets, people, onAdd, onRemove, onSetLimit, notify, company }) {
+function Entries({ expenses, budgets, people, profiles = [], onAdd, onRemove, onSetLimit, notify, company }) {
+  const cats = useMemo(() => [...CATEGORIES, ...profiles.map(p => p.name)], [profiles]);
   const [f, setF] = useState({ title: "", payee: "", payeeType: "Employee", category: "Other", amount: "", date: toInputDate(), method: "Cash" });
   const [busy, setBusy] = useState(false);
   const [month, setMonth] = useState("all");
@@ -115,8 +117,9 @@ function Entries({ expenses, budgets, people, onAdd, onRemove, onSetLimit, notif
     && (!needle || [r.payee, r.title, r.category, r.payeeType, r.notes].join(" ").toLowerCase().includes(needle)));
   const status = useMemo(() => budgetStatus(expenses, budgets), [expenses, budgets]);
   const preview = useMemo(() => { const used = status.filter(x => x.limit || x.spent > 0).sort((a, b) => b.pct - a.pct || b.spent - a.spent); return (used.length ? used : status).slice(0, 4); }, [status]);
-  const monthTotal = status.reduce((a, s) => a + s.spent, 0);
-  const pie = status.filter(s => s.spent > 0).map(s => ({ name: s.category, value: s.spent }));
+  const monthByCat = useMemo(() => { const m = {}; expenses.forEach(e => { const d = toLocalDay(e.date); if (d && thisMonth(d)) m[e.category] = (m[e.category] || 0) + Number(e.amount); }); return m; }, [expenses]);
+  const monthTotal = Object.values(monthByCat).reduce((a, v) => a + v, 0);
+  const pie = Object.entries(monthByCat).filter(([, v]) => v > 0).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
   const names = useMemo(() => [...new Set([...people, ...expenses.map(e => e.payee).filter(Boolean)])].sort((a, b) => a.localeCompare(b)), [people, expenses]);
   // Total spent on each person (employee / seller) in the rows currently shown.
   const byPerson = useMemo(() => {
@@ -145,7 +148,7 @@ function Entries({ expenses, budgets, people, onAdd, onRemove, onSetLimit, notif
         <datalist id="payee-list">{names.map(n => <option key={n} value={n} />)}</datalist>
         <label>Person is a<select value={f.payeeType} onChange={e => setF({ ...f, payeeType: e.target.value })}>{PAYEE_TYPES.map(c => <option key={c}>{c}</option>)}</select></label>
         <label>What for<input value={f.title} onChange={e => setF({ ...f, title: e.target.value })} placeholder="e.g. Labour for plaster work" /></label>
-        <label>Category<select value={f.category} onChange={e => setF({ ...f, category: e.target.value })}>{CATEGORIES.map(c => <option key={c}>{c}</option>)}</select></label>
+        <label>Category / profile<select value={f.category} onChange={e => setF({ ...f, category: e.target.value })}>{cats.map(c => <option key={c}>{c}</option>)}</select></label>
         <label>Amount (Rs)<input type="number" min="0" step="any" inputMode="decimal" value={f.amount} onChange={e => setF({ ...f, amount: e.target.value })} /></label>
         <label>Date<input type="date" value={f.date} onChange={e => setF({ ...f, date: e.target.value })} /></label>
         <div className="swap"><Button type="submit" disabled={busy}><Plus size={15} />Add expense</Button></div>
@@ -203,7 +206,8 @@ function Entries({ expenses, budgets, people, onAdd, onRemove, onSetLimit, notif
 }
 
 
-function Bills({ bills, people, onAdd, onOpen, notify }) {
+function Bills({ bills, people, profiles = [], onAdd, onOpen, notify }) {
+  const cats = useMemo(() => [...CATEGORIES, ...profiles.map(p => p.name)], [profiles]);
   const due = new Date(); due.setDate(due.getDate() + 14);
   const [f, setF] = useState({ payee: "", payeePhone: "", payeeType: "Employee", title: "", category: "Labour", amount: "", dueDate: toInputDate(due), paidNow: "", method: "Cash" });
   const [busy, setBusy] = useState(false), [q, setQ] = useState(""), [tab, setTab] = useState("open"), [all, setAll] = useState(false);
@@ -236,7 +240,7 @@ function Bills({ bills, people, onAdd, onOpen, notify }) {
         <label>WhatsApp number <em>for updates</em><input type="tel" inputMode="tel" value={f.payeePhone} onChange={e => set("payeePhone", e.target.value)} placeholder="0300 1234567" /></label>
         <label>Person is a<select value={f.payeeType} onChange={e => set("payeeType", e.target.value)}>{PAYEE_TYPES.map(c => <option key={c}>{c}</option>)}</select></label>
         <label>What for<input value={f.title} onChange={e => set("title", e.target.value)} placeholder="e.g. Plaster work, Plot 12" /></label>
-        <label>Category<select value={f.category} onChange={e => set("category", e.target.value)}>{CATEGORIES.map(c => <option key={c}>{c}</option>)}</select></label>
+        <label>Category / profile<select value={f.category} onChange={e => set("category", e.target.value)}>{cats.map(c => <option key={c}>{c}</option>)}</select></label>
         <label>Total to pay (Rs)<input type="number" min="0" step="any" inputMode="decimal" value={f.amount} onChange={e => set("amount", e.target.value)} /></label>
         <label>Pay by <em>due date</em><input type="date" value={f.dueDate} onChange={e => set("dueDate", e.target.value)} /></label>
         <label>Paid now <em>optional</em><input type="number" min="0" step="any" inputMode="decimal" value={f.paidNow} onChange={e => set("paidNow", e.target.value)} placeholder="0" /></label>
@@ -260,10 +264,14 @@ function Bills({ bills, people, onAdd, onOpen, notify }) {
   </>;
 }
 
-export default function Expenses({ sales, expenses, bills = [], budgets, people = [], onAdd, onAddBill, onOpenBill, onRemove, onSetLimit, notify, company = "Finora Services" }) {
-  const [tab, setTab] = useState("report");
+export default function Expenses({ sales, expenses, bills = [], budgets, people = [], profiles = [], onAdd, onAddBill, onOpenBill, onRemove, onSetLimit, onCreateProfile, onRenameProfile, onDeleteProfile, notify, company = "Finora Services" }) {
+  const [tab, setTab] = useState("profiles");
+  const openBills = bills.filter(isOpen).length;
   return <>
-    <Segmented label="Expenses section" value={tab} onChange={setTab} options={[["report", "Monthly report"], ["entries", "Expenses & budgets"], ["bills", `Bills to pay${bills.filter(isOpen).length ? ` (${bills.filter(isOpen).length})` : ""}`]]} />
-    {tab === "report" ? <Report sales={sales} expenses={expenses} company={company} notify={notify} /> : tab === "bills" ? <Bills {...{ bills, people, onAdd: onAddBill, onOpen: onOpenBill, notify }} /> : <Entries {...{ expenses, budgets, people, onAdd, onRemove, onSetLimit, notify, company }} />}
+    <Segmented label="Expenses section" value={tab} onChange={setTab} options={[["profiles", "Profiles"], ["entries", "Expenses"], ["bills", `Bills${openBills ? ` (${openBills})` : ""}`], ["report", "Report"]]} />
+    {tab === "profiles" ? <Profiles {...{ expenses, profiles, onAdd, onRemove, notify, company, onCreate: onCreateProfile, onRename: onRenameProfile, onDelete: onDeleteProfile }} /> :
+      tab === "report" ? <Report sales={sales} expenses={expenses} company={company} notify={notify} /> :
+      tab === "bills" ? <Bills {...{ bills, people, profiles, onAdd: onAddBill, onOpen: onOpenBill, notify }} /> :
+      <Entries {...{ expenses, budgets, people, profiles, onAdd, onRemove, onSetLimit, notify, company }} />}
   </>;
 }

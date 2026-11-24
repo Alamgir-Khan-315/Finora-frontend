@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { LayoutDashboard, ReceiptText, Users, Settings as Cog, Plus, Menu, X, RefreshCw, AlertCircle, CheckCircle2, Sun, Moon, ArrowUpRight, Calculator, Wallet } from "lucide-react";
+import { LayoutDashboard, ReceiptText, Users, Settings as Cog, Plus, RefreshCw, AlertCircle, CheckCircle2, Sun, Moon, ArrowUpRight, Calculator, Wallet, Info, UserRound, Phone } from "lucide-react";
 import { apiRequest, resolveServer } from "./config";
 import { normalize, normalizeWork, normalizeBill, billExpenseRows, dateInRange, num } from "./lib";
 import { openChatWithText } from "./whatsapp";
@@ -14,25 +14,33 @@ import Logo from "./components/Logo";
 import Calculators from "./components/Calculators";
 import Expenses, { budgetStatus } from "./components/Expenses";
 import Notifications from "./components/Notifications";
+import About from "./components/About";
+import Contact from "./components/Contact";
+import InfoSheet from "./components/InfoSheet";
 
-const NAV = [["Dashboard", LayoutDashboard], ["Sales & invoices", ReceiptText], ["Customers", Users], ["Expenses", Wallet], ["Work & calculators", Calculator], ["Settings", Cog]];
+const NAV = [["Dashboard", LayoutDashboard], ["Sales & invoices", ReceiptText], ["Customers", Users], ["Expenses", Wallet], ["Work & calculators", Calculator], ["About Finora", Info], ["Contact (developer)", UserRound], ["Settings", Cog]];
+// Phone bottom bar: [page, short label, icon]. About + Developer live behind the (i) button in the header.
+const TABS = [["Dashboard", "Home", LayoutDashboard], ["Sales & invoices", "Sales", ReceiptText], ["Customers", "Customers", Users], ["Expenses", "Expenses", Wallet], ["Work & calculators", "Work", Calculator], ["Settings", "Settings", Cog]];
 const HEAD = {
   "Dashboard": ["Dashboard", "Your sales, money received, expenses and profit at a glance."],
   "Sales & invoices": ["Sales & invoices", "Every sale with its invoice. Open one to preview or download the PDF."],
   "Customers": ["Customers", "Who you sell to and who still owes you."],
   "Expenses": ["Expenses", "Month-by-month income, spending and profit or loss."],
   "Work & calculators": ["Work & calculators", "Work you gave to employees (area × rate) and their working permissions."],
+  "About Finora": ["About Finora", "What Finora does and how it keeps your data."],
+  "Contact (developer)": ["Contact (developer)", "Who made Finora, and how to get a website or software made for your business."],
   "Settings": ["Settings", "Business details shown on your invoices."]
 };
 const DEFAULT_PORTFOLIO = "https://portfolio-web-psi-rosy.vercel.app/";
 
 export default function App() {
   const [page, setPage] = useState("Dashboard");
-  const [drawer, setDrawer] = useState(false);
+  const [info, setInfo] = useState(false);
   const [raw, setRaw] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [budgets, setBudgets] = useState({});
   const [works, setWorks] = useState([]);
+  const [profiles, setProfiles] = useState([]);   // your own expense profiles (the built-in ones live in code)
   const [payables, setPayables] = useState([]);   // bills you owe to employees / sellers
   const [notice, setNotice] = useState(null);   // WhatsApp update the server could not send by itself
   const [business, setBusiness] = useState({ businessName: "Finora Services", portfolio: "" });
@@ -61,9 +69,9 @@ export default function App() {
     setLoading(true); setError("");
     try {
       setServer(await resolveServer(true));
-      const [sales, exp, bud, biz, wrk, bills] = await Promise.all([apiRequest("/sales"), apiRequest("/expenses"), apiRequest("/budgets"), apiRequest("/settings"), apiRequest("/works"), apiRequest("/payables")]);
+      const [sales, exp, bud, biz, wrk, bills, profs] = await Promise.all([apiRequest("/sales"), apiRequest("/expenses"), apiRequest("/budgets"), apiRequest("/settings"), apiRequest("/works"), apiRequest("/payables"), apiRequest("/profiles").catch(() => [])]);
       if (!Array.isArray(sales) || !Array.isArray(exp) || !Array.isArray(wrk) || !Array.isArray(bills)) throw new Error("The server returned unexpected data.");
-      setRaw(sales); setWorks(wrk); setPayables(bills); setExpenses(exp); setBudgets(Object.fromEntries(bud.map(b => [b.category, b.limit]))); setBusiness(biz); setLoaded(true);
+      setProfiles(Array.isArray(profs) ? profs : []); setRaw(sales); setWorks(wrk); setPayables(bills); setExpenses(exp); setBudgets(Object.fromEntries(bud.map(b => [b.category, b.limit]))); setBusiness(biz); setLoaded(true);
     } catch (e) { setError(e.message || "Could not load your data."); }
     finally { setLoading(false); }
   }, []);
@@ -157,32 +165,47 @@ export default function App() {
     catch (e) { notify(e.message, true); }
   };
 
-  const go = p => { setPage(p); setSalesQuery(""); setOpenId(null); setDrawer(false); window.scrollTo(0, 0); };
+  // Expense profiles
+  const byName = (a, b) => a.name.localeCompare(b.name);
+  const createProfile = async name => { const p = await apiRequest("/profiles", { method: "POST", body: JSON.stringify({ name }) }); setProfiles(l => [...l, p].sort(byName)); notify(`Profile “${p.name}” created`); };
+  const renameProfile = async (p, name) => {
+    const u = await apiRequest(`/profiles/${encodeURIComponent(p.id)}`, { method: "PATCH", body: JSON.stringify({ name }) });
+    setProfiles(l => l.map(x => x.id === p.id ? u : x).sort(byName));
+    const move = to => r => r.category === p.name ? { ...r, category: to } : r;
+    setExpenses(l => l.map(move(u.name))); setPayables(l => l.map(move(u.name))); notify("Profile renamed");
+  };
+  const deleteProfile = async p => {
+    await apiRequest(`/profiles/${encodeURIComponent(p.id)}`, { method: "DELETE" });
+    setProfiles(l => l.filter(x => x.id !== p.id));
+    const move = r => r.category === p.name ? { ...r, category: "Other" } : r;
+    setExpenses(l => l.map(move)); setPayables(l => l.map(move)); notify(`Profile “${p.name}” deleted. Its expenses moved to Other.`);
+  };
+
+  const go = p => { setPage(p); setSalesQuery(""); setOpenId(null); window.scrollTo(0, 0); };
   const company = business.businessName || "Finora Services";
   const [title, sub] = HEAD[page];
   const online = loaded && !error;
 
   return <div className="shell">
-    <aside className={`side ${drawer ? "open" : ""}`}>
+    <aside className="side">
       <div className="side-top">
         <div className="logo"><Logo size={42} /><b>finora</b></div>
-        <button className="icon-btn side-close" onClick={() => setDrawer(false)} aria-label="Close menu"><X size={18} /></button>
       </div>
       <div className="company"><small>Business</small><b>{company}</b></div>
       <nav aria-label="Main">{NAV.map(([name, Icon]) => <button key={name} className={page === name ? "on" : ""} onClick={() => go(name)} aria-current={page === name ? "page" : undefined}><Icon size={18} />{name}</button>)}</nav>
       <div className="side-foot"><span className={`dot ${online ? "ok" : loading ? "demo" : "bad"}`} />{online ? <span>Saved in database<small>{server?.label}</small></span> : loading ? "Connecting…" : "Database not reachable"}</div>
     </aside>
-    {drawer && <div className="scrim" onClick={() => setDrawer(false)} />}
 
     <main>
       <header className="top">
-        <button className="icon-btn burger" onClick={() => setDrawer(true)} aria-label="Open menu"><Menu size={20} /></button>
+        <div className="top-brand" key={page}><Logo size={36} /><div><small>finora</small><b>{title}</b></div></div>
         <Clock />
         <div className="top-actions">
           <button className="icon-btn theme-toggle" onClick={() => setTheme(t => t === "dark" ? "light" : "dark")} aria-label={theme === "dark" ? "Switch to day mode" : "Switch to night mode"} title={theme === "dark" ? "Day mode" : "Night mode"}><Sun className="sun" size={18} /><Moon className="moon" size={17} /></button>
           <Notifications invoices={all} budgets={budgetLevels} works={workRows} onOpenInvoice={r => setOpenId(r.id)} goExpenses={() => go("Expenses")} goWork={() => go("Work & calculators")} />
-          <button className="icon-btn" onClick={load} aria-label="Refresh data" title="Refresh"><RefreshCw size={17} className={loading ? "spin" : ""} /></button>
-          <Button onClick={() => setForm(true)} disabled={!loaded}><Plus size={16} /><span className="btn-text">New sale</span></Button>
+          <button className="icon-btn refresh-btn" onClick={load} aria-label="Refresh data" title="Refresh"><RefreshCw size={17} className={loading ? "spin" : ""} /></button>
+          <Button className="new-sale-top" onClick={() => setForm(true)} disabled={!loaded}><Plus size={16} /><span className="btn-text">New sale</span></Button>
+          <button className="icon-btn info-btn" onClick={() => setInfo(true)} aria-label="About Finora and developer" title="About & developer"><Info size={18} /></button>
         </div>
       </header>
 
@@ -198,16 +221,25 @@ export default function App() {
           {page === "Dashboard" && <Dashboard rows={dashRows} allRows={all} expenses={expenseRows} works={workRows} goWork={() => go("Work & calculators")} range={dashRange} setRange={setDashRange} onOpen={r => setOpenId(r.id)} onMarkPaid={markPaid} goSales={() => go("Sales & invoices")} goExpenses={() => go("Expenses")} />}
           {page === "Sales & invoices" && <Sales key={salesQuery} initialQuery={salesQuery} rows={salesRows} range={salesRange} setRange={setSalesRange} onOpen={r => setOpenId(r.id)} onMarkPaid={markPaid} onAdd={() => setForm(true)} company={company} notify={notify} />}
           {page === "Customers" && <Customers rows={all} company={company} notify={notify} onFilter={name => { setSalesRange("all"); go("Sales & invoices"); setSalesQuery(name); }} />}
-          {page === "Expenses" && <Expenses sales={all} expenses={expenseRows} bills={billRows} budgets={budgets} people={people} onAddBill={saveBill} onOpenBill={b => setOpenId(b.id)} onAdd={addExpense} onRemove={removeExpense} onSetLimit={setLimit} notify={notify} company={company} />}
+          {page === "Expenses" && <Expenses sales={all} expenses={expenseRows} bills={billRows} budgets={budgets} people={people} onAddBill={saveBill} onOpenBill={b => setOpenId(b.id)} onAdd={addExpense} onRemove={removeExpense} onSetLimit={setLimit} notify={notify} company={company} profiles={profiles} onCreateProfile={createProfile} onRenameProfile={renameProfile} onDeleteProfile={deleteProfile} />}
           {page === "Work & calculators" && <Calculators works={workRows} employees={people} onSaveWork={saveWork} onRenewWork={renewWork} onWorkStatus={setWorkStatus} onDeleteWork={deleteWork} onBillWork={billFromWork} notify={notify} />}
+          {page === "About Finora" && <About company={company} />}
+          {page === "Contact (developer)" && <Contact portfolio={business.portfolio || DEFAULT_PORTFOLIO} />}
           {page === "Settings" && <Settings business={business} onSave={saveBusiness} />}
         </>}
       </div>
       <footer className="foot">
         <span>© {new Date().getFullYear()} Finora · Made by <b>AK</b></span>
-        <a href={business.portfolio || DEFAULT_PORTFOLIO} target="_blank" rel="noopener noreferrer">Visit portfolio <ArrowUpRight size={15} /></a>
+        <span className="foot-links"><a href={business.portfolio || DEFAULT_PORTFOLIO} target="_blank" rel="noopener noreferrer">Visit profile <ArrowUpRight size={15} /></a><button type="button" onClick={() => go("Contact (developer)")}><Phone size={14} />Contact</button></span>
       </footer>
     </main>
+
+    <button className="fab" onClick={() => setForm(true)} disabled={!loaded} aria-label="New sale"><Plus size={26} strokeWidth={2.4} /></button>
+    <nav className="tabbar" aria-label="Main" style={{ "--i": Math.max(0, TABS.findIndex(t => t[0] === page)), "--n": TABS.length }}>
+      <i className={`tab-pill ${TABS.some(t => t[0] === page) ? "" : "hide"}`} aria-hidden="true" />
+      {TABS.map(([name, label, Icon]) => <button key={name} className={page === name ? "on" : ""} onClick={() => go(name)} aria-label={name} aria-current={page === name ? "page" : undefined}><Icon size={21} strokeWidth={page === name ? 2.3 : 1.9} /><span>{label}</span></button>)}
+    </nav>
+    {info && <InfoSheet company={company} portfolio={business.portfolio || DEFAULT_PORTFOLIO} onClose={() => setInfo(false)} onRefresh={load} loading={loading} />}
 
     {open && <InvoiceModal invoice={open} company={company} onClose={() => setOpenId(null)} onMarkPaid={markPaid} onCancel={cancel} onDelete={remove} onSavePhone={savePhone} onAddPayment={addPayment} onRemovePayment={removePayment} notice={notice} onSendNotice={sendNotice} onDismissNotice={() => setNotice(null)} notify={notify} />}
     {form && <SaleForm services={services} customers={customers} onClose={() => setForm(false)} onSave={save} />}

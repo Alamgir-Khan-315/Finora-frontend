@@ -64,3 +64,11 @@ export async function apiRequest(path, options = {}) {
     catch (e2) { throw e2.status ? e2 : new Error(noServer()); }
   }
 }
+
+// About the developer, shown on the "Contact (developer)" page and in the footer. Fill in `whatsapp` / `email` to show those buttons.
+export const DEVELOPER = {
+  name: "AK",
+  portfolio: "https://portfolio-web-psi-rosy.vercel.app/",
+  whatsapp: "",   // e.g. "0300 1234567"
+  email: ""       // e.g. "name@example.com"
+};

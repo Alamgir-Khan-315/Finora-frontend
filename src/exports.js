@@ -134,12 +134,12 @@ export function buildCustomer({ customer: c, invoices, business, logo, now }) {
   return wb;
 }
 
-export function buildExpenses({ rows, business, filters = [], logo, now }) {
+export function buildExpenses({ rows, business, filters = [], logo, now, title = "Expense Report", kind = "Expense sheet" }) {
   const { wb, now: t } = base({ now }, logo), date = dmy(t);
   const total = rows.reduce((a, r) => a + Number(r.amount), 0);
   addReport(wb, {
-    name: "Expenses", business, title: "Expense Report", date, totalWord: "Expenses",
-    subtitle: compact(["Expense sheet", ...(filters.length ? filters : ["All expenses"])]),
+    name: "Expenses", business, title, date, totalWord: "Expenses",
+    subtitle: compact([kind, ...(filters.length ? filters : ["All expenses"])]),
     cardRows: [[
       { label: "Entries", value: rows.length, fmt: "int" },
       { label: "Total spent (PKR)", value: total, fmt: "money", tone: "bad" },
@@ -191,5 +191,5 @@ const save = (wb, name) => downloadBlob(wb.blob(), name);
 export async function exportSales(o) { save(buildSales({ ...o, logo: await logoBytes() }), `${slug(o.business)}-Sales-Report-${iso(new Date())}.xlsx`); }
 export async function exportCustomers(o) { save(buildCustomers({ ...o, logo: await logoBytes() }), `${slug(o.business)}-Customers-${iso(new Date())}.xlsx`); }
 export async function exportCustomer(o) { save(buildCustomer({ ...o, logo: await logoBytes() }), `Customer-${slug(o.customer.name)}-${iso(new Date())}.xlsx`); }
-export async function exportExpenses(o) { save(buildExpenses({ ...o, logo: await logoBytes() }), `${slug(o.business)}-Expense-Report-${iso(new Date())}.xlsx`); }
+export async function exportExpenses(o) { save(buildExpenses({ ...o, logo: await logoBytes() }), `${o.fileName ? slug(o.fileName) : `${slug(o.business)}-Expense-Report`}-${iso(new Date())}.xlsx`); }
 export async function exportProfitLoss(o) { save(buildProfitLoss({ ...o, logo: await logoBytes() }), `${slug(o.business)}-Profit-Loss-${o.year}.xlsx`); }
