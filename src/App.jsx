@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { LayoutDashboard, ReceiptText, Users, Settings as Cog, Plus, RefreshCw, AlertCircle, CheckCircle2, Sun, Moon, ArrowUpRight, Calculator, Wallet, Info, UserRound, Phone } from "lucide-react";
+import { LayoutDashboard, ReceiptText, Users, Settings as Cog, Plus, RefreshCw, AlertCircle, CheckCircle2, Sun, Moon, ArrowUpRight, Wallet, Info, UserRound, Phone } from "lucide-react";
 import { apiRequest, resolveServer, DEVELOPER } from "./config";
-import { normalize, normalizeWork, normalizeBill, billExpenseRows, dateInRange, num } from "./lib";
+import { normalize, normalizeBill, billExpenseRows, dateInRange } from "./lib";
 import { openChatWithText } from "./whatsapp";
 import { Button, Clock } from "./components/ui";
 import Dashboard from "./components/Dashboard";
@@ -11,22 +11,20 @@ import InvoiceModal from "./components/InvoiceModal";
 import SaleForm from "./components/SaleForm";
 import Settings from "./components/Settings";
 import Logo from "./components/Logo";
-import Calculators from "./components/Calculators";
 import Expenses, { budgetStatus } from "./components/Expenses";
 import Notifications from "./components/Notifications";
 import About from "./components/About";
 import Contact from "./components/Contact";
 import InfoSheet from "./components/InfoSheet";
 
-const NAV = [["Dashboard", LayoutDashboard], ["Sales & invoices", ReceiptText], ["Customers", Users], ["Expenses", Wallet], ["Work & calculators", Calculator], ["About Finora", Info], ["Contact (developer)", UserRound], ["Settings", Cog]];
+const NAV = [["Dashboard", LayoutDashboard], ["Sales & invoices", ReceiptText], ["Customers", Users], ["Expenses", Wallet], ["About Finora", Info], ["Contact (developer)", UserRound], ["Settings", Cog]];
 // Phone bottom bar: [page, short label, icon]. About + Developer live behind the (i) button in the header.
-const TABS = [["Dashboard", "Home", LayoutDashboard], ["Sales & invoices", "Sales", ReceiptText], ["Customers", "Customers", Users], ["Expenses", "Expenses", Wallet], ["Work & calculators", "Work", Calculator], ["Settings", "Settings", Cog]];
+const TABS = [["Dashboard", "Home", LayoutDashboard], ["Sales & invoices", "Sales", ReceiptText], ["Customers", "Customers", Users], ["Expenses", "Expenses", Wallet], ["Settings", "Settings", Cog]];
 const HEAD = {
   "Dashboard": ["Dashboard", "Your sales, money received, expenses and profit at a glance."],
   "Sales & invoices": ["Sales & invoices", "Every sale with its invoice. Open one to preview or download the PDF."],
   "Customers": ["Customers", "Who you sell to and who still owes you."],
   "Expenses": ["Expenses", "Month-by-month income, spending and profit or loss."],
-  "Work & calculators": ["Work & calculators", "Work you gave to employees (area × rate) and their working permissions."],
   "About Finora": ["About Finora", "What Finora does and how it keeps your data."],
   "Contact (developer)": ["Contact (developer)", "Who made Finora, and how to get a website or software made for your business."],
   "Settings": ["Settings", "Business details shown on your invoices."]
@@ -39,7 +37,6 @@ export default function App() {
   const [raw, setRaw] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [budgets, setBudgets] = useState({});
-  const [works, setWorks] = useState([]);
   const [profiles, setProfiles] = useState([]);   // your own expense profiles (the built-in ones live in code)
   const [payables, setPayables] = useState([]);   // bills you owe to employees / sellers
   const [notice, setNotice] = useState(null);   // WhatsApp update the server could not send by itself
@@ -62,6 +59,16 @@ export default function App() {
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#0b1020" : "#1c3b6c");
   }, [theme]);
 
+  // Phones: every data table turns into a stack of cards. This copies each column title onto its cells so a card can show "Amount: Rs 500".
+  useEffect(() => {
+    const label = () => document.querySelectorAll("table:not(.report):not(.paper-lines)").forEach(t => {
+      const heads = [...t.querySelectorAll("thead th")].map(h => h.querySelector(".sr") ? "" : h.textContent.trim());
+      t.classList.add("m-cards");
+      t.querySelectorAll("tbody tr").forEach(tr => [...tr.children].forEach((td, i) => { const l = heads[i] && heads[i] !== "Actions" ? heads[i] : ""; if (l) { if (td.dataset.label !== l) td.dataset.label = l; } else td.classList.add("m-nolabel"); }));
+    });
+    label(); const mo = new MutationObserver(label); mo.observe(document.body, { childList: true, subtree: true }); return () => mo.disconnect();
+  }, []);
+
   const notify = useCallback((text, bad = false) => { setToast({ text, bad }); clearTimeout(notify.t); notify.t = setTimeout(() => setToast(null), 3200); }, []);
 
   // Everything lives in the database: sales, expenses, budgets and business details.
@@ -69,9 +76,9 @@ export default function App() {
     setLoading(true); setError("");
     try {
       setServer(await resolveServer(true));
-      const [sales, exp, bud, biz, wrk, bills, profs] = await Promise.all([apiRequest("/sales"), apiRequest("/expenses"), apiRequest("/budgets"), apiRequest("/settings"), apiRequest("/works"), apiRequest("/payables"), apiRequest("/profiles").catch(() => [])]);
-      if (!Array.isArray(sales) || !Array.isArray(exp) || !Array.isArray(wrk) || !Array.isArray(bills)) throw new Error("The server returned unexpected data.");
-      setProfiles(Array.isArray(profs) ? profs : []); setRaw(sales); setWorks(wrk); setPayables(bills); setExpenses(exp); setBudgets(Object.fromEntries(bud.map(b => [b.category, b.limit]))); setBusiness(biz); setLoaded(true);
+      const [sales, exp, bud, biz, bills, profs] = await Promise.all([apiRequest("/sales"), apiRequest("/expenses"), apiRequest("/budgets"), apiRequest("/settings"), apiRequest("/payables"), apiRequest("/profiles").catch(() => [])]);
+      if (!Array.isArray(sales) || !Array.isArray(exp) || !Array.isArray(bills)) throw new Error("The server returned unexpected data.");
+      setProfiles(Array.isArray(profs) ? profs : []); setRaw(sales); setPayables(bills); setExpenses(exp); setBudgets(Object.fromEntries(bud.map(b => [b.category, b.limit]))); setBusiness(biz); setLoaded(true);
     } catch (e) { setError(e.message || "Could not load your data."); }
     finally { setLoading(false); }
   }, []);
@@ -90,8 +97,6 @@ export default function App() {
     return [...map.values()];
   }, [all]);
   const services = useMemo(() => [...new Set(all.map(r => r.service))].filter(Boolean), [all]);
-  const workRows = useMemo(() => works.map(normalizeWork), [works]);
-  const people = useMemo(() => [...new Set(workRows.map(w => w.employee).filter(Boolean))], [workRows]);
   const budgetLevels = useMemo(() => budgetStatus(expenseRows, budgets), [expenseRows, budgets]);
 
   const replace = useCallback((id, record) => setRaw(list => list.map(r => r.id === id ? record : r)), []);
@@ -141,19 +146,6 @@ export default function App() {
     const b = await apiRequest("/payables", { method: "POST", body: JSON.stringify(data) });
     setPayables(l => [b, ...l]); setOpenId(b.id); notify(`Bill for ${b.payee} saved`);
   };
-  const billFromWork = async w => {
-    try { await saveBill({ payee: w.employee, payeePhone: w.employeePhone, payeeType: "Employee", category: "Labour", title: `${w.site} (${num(w.areaSqft)} sq ft × ${num(w.ratePerSqft)})`, amount: w.amount }); }
-    catch (e) { notify(e.message, true); }
-  };
-
-  // Work given to employees and their working permissions.
-  const putWork = rec => setWorks(l => l.map(w => w.id === rec.id ? rec : w));
-  const saveWork = async data => { const w = await apiRequest("/works", { method: "POST", body: JSON.stringify(data) }); setWorks(l => [w, ...l]); notify("Work order saved"); };
-  const body = f => ({ permitNo: f.permitNo, permitAuthority: f.permitAuthority, permitStart: f.permitStart || null, permitDue: f.permitDue, note: f.note });
-  const renewWork = async (w, f) => { putWork(await apiRequest(`/works/${w.id}/renew`, { method: "POST", body: JSON.stringify(body(f)) })); notify("Permission renewed and saved"); };
-  const setWorkStatus = async (w, status) => { try { putWork(await apiRequest(`/works/${w.id}`, { method: "PATCH", body: JSON.stringify({ status }) })); notify(status === "Active" ? "Work reopened" : "Work marked as completed"); } catch (e) { notify(e.message, true); } };
-  const deleteWork = async w => { try { await apiRequest(`/works/${w.id}`, { method: "DELETE" }); setWorks(l => l.filter(x => x.id !== w.id)); notify("Work deleted"); } catch (e) { notify(e.message, true); } };
-
   const addExpense = async data => { const e = await apiRequest("/expenses", { method: "POST", body: JSON.stringify(data) }); setExpenses(l => [e, ...l]); };
   const removeExpense = async id => {
     if (String(id).startsWith("bill:")) { const [, billId, payId] = id.split(":"); const bill = billRows.find(b => b.id === billId); if (bill) await removePayment(bill, payId); return; }   // a payment made on a bill
@@ -175,8 +167,8 @@ export default function App() {
     setExpenses(l => l.map(move(u.name))); setPayables(l => l.map(move(u.name))); notify("Profile renamed");
   };
   const deleteProfile = async p => {
-    await apiRequest(`/profiles/${encodeURIComponent(p.id)}`, { method: "DELETE" });
-    setProfiles(l => l.filter(x => x.id !== p.id));
+    if (p.builtin) { await apiRequest(`/profiles/builtin/${encodeURIComponent(p.name)}`, { method: "DELETE" }); setBusiness(b => ({ ...b, hiddenProfiles: [...new Set([...(b.hiddenProfiles || []), p.name])] })); }
+    else { await apiRequest(`/profiles/${encodeURIComponent(p.id)}`, { method: "DELETE" }); setProfiles(l => l.filter(x => x.id !== p.id)); }
     const move = r => r.category === p.name ? { ...r, category: "Other" } : r;
     setExpenses(l => l.map(move)); setPayables(l => l.map(move)); notify(`Profile “${p.name}” deleted. Its expenses moved to Other.`);
   };
@@ -202,7 +194,7 @@ export default function App() {
         <Clock />
         <div className="top-actions">
           <button className="icon-btn theme-toggle" onClick={() => setTheme(t => t === "dark" ? "light" : "dark")} aria-label={theme === "dark" ? "Switch to day mode" : "Switch to night mode"} title={theme === "dark" ? "Day mode" : "Night mode"}><Sun className="sun" size={18} /><Moon className="moon" size={17} /></button>
-          <Notifications invoices={all} budgets={budgetLevels} works={workRows} onOpenInvoice={r => setOpenId(r.id)} goExpenses={() => go("Expenses")} goWork={() => go("Work & calculators")} />
+          <Notifications invoices={all} budgets={budgetLevels} onOpenInvoice={r => setOpenId(r.id)} goExpenses={() => go("Expenses")} />
           <button className="icon-btn refresh-btn" onClick={load} aria-label="Refresh data" title="Refresh"><RefreshCw size={17} className={loading ? "spin" : ""} /></button>
           <Button className="new-sale-top" onClick={() => setForm(true)} disabled={!loaded}><Plus size={16} /><span className="btn-text">New sale</span></Button>
           <button className="icon-btn info-btn" onClick={() => setInfo(true)} aria-label="About Finora and developer" title="About & developer"><Info size={18} /></button>
@@ -218,11 +210,10 @@ export default function App() {
 
         {!loaded && !error && <div className="panel loading-card"><RefreshCw className="spin" size={20} /><b>Loading your data…</b></div>}
         {loaded && <>
-          {page === "Dashboard" && <Dashboard rows={dashRows} allRows={all} expenses={expenseRows} works={workRows} goWork={() => go("Work & calculators")} range={dashRange} setRange={setDashRange} onOpen={r => setOpenId(r.id)} onMarkPaid={markPaid} goSales={() => go("Sales & invoices")} goExpenses={() => go("Expenses")} />}
+          {page === "Dashboard" && <Dashboard rows={dashRows} allRows={all} expenses={expenseRows} range={dashRange} setRange={setDashRange} onOpen={r => setOpenId(r.id)} onMarkPaid={markPaid} goSales={() => go("Sales & invoices")} goExpenses={() => go("Expenses")} />}
           {page === "Sales & invoices" && <Sales key={salesQuery} initialQuery={salesQuery} rows={salesRows} range={salesRange} setRange={setSalesRange} onOpen={r => setOpenId(r.id)} onMarkPaid={markPaid} onAdd={() => setForm(true)} company={company} notify={notify} />}
           {page === "Customers" && <Customers rows={all} company={company} notify={notify} onFilter={name => { setSalesRange("all"); go("Sales & invoices"); setSalesQuery(name); }} />}
-          {page === "Expenses" && <Expenses sales={all} expenses={expenseRows} bills={billRows} budgets={budgets} people={people} onAddBill={saveBill} onOpenBill={b => setOpenId(b.id)} onAdd={addExpense} onRemove={removeExpense} onSetLimit={setLimit} notify={notify} company={company} profiles={profiles} onCreateProfile={createProfile} onRenameProfile={renameProfile} onDeleteProfile={deleteProfile} />}
-          {page === "Work & calculators" && <Calculators works={workRows} employees={people} onSaveWork={saveWork} onRenewWork={renewWork} onWorkStatus={setWorkStatus} onDeleteWork={deleteWork} onBillWork={billFromWork} notify={notify} />}
+          {page === "Expenses" && <Expenses sales={all} expenses={expenseRows} bills={billRows} budgets={budgets} onAddBill={saveBill} onOpenBill={b => setOpenId(b.id)} onAdd={addExpense} onRemove={removeExpense} onSetLimit={setLimit} notify={notify} company={company} profiles={profiles} hiddenProfiles={business.hiddenProfiles || []} onCreateProfile={createProfile} onRenameProfile={renameProfile} onDeleteProfile={deleteProfile} />}
           {page === "About Finora" && <About company={company} />}
           {page === "Contact (developer)" && <Contact portfolio={PORTFOLIO} />}
           {page === "Settings" && <Settings business={business} onSave={saveBusiness} />}

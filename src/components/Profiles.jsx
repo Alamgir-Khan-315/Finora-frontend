@@ -3,7 +3,7 @@ import { ChevronRight, ArrowLeft, FolderPlus, SlidersHorizontal, Download, Plus,
 import { money, fmtDate, toInputDate, expenseDate } from "../lib";
 import { CATEGORIES, PAYEE_TYPES, profileColor, initialOf } from "../profiles";
 import { exportExpenses } from "../exports";
-import { Button, Empty, Modal } from "./ui";
+import { Button, Empty, Modal, Status } from "./ui";
 
 const sameMonth = d => { const n = new Date(); return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear(); };
 
@@ -12,20 +12,20 @@ function Avatar({ name, size = 46 }) {
 }
 
 // The Profiles tab: one card per profile. Open a card to see every expense of that profile and download it as Excel.
-export default function Profiles({ expenses, profiles, onAdd, onRemove, onCreate, onRename, onDelete, notify, company }) {
+export default function Profiles({ expenses, profiles, hiddenProfiles = [], bills = [], onOpenBill, onAdd, onRemove, onCreate, onRename, onDelete, notify, company }) {
   const [open, setOpen] = useState(null), [creating, setCreating] = useState(false), [managing, setManaging] = useState(false);
   const rows = useMemo(() => expenses.map(e => ({ ...e, d: expenseDate(e) })).sort((a, b) => b.d - a.d), [expenses]);
   const custom = useMemo(() => profiles.map(p => p.name), [profiles]);
   const cards = useMemo(() => {
-    const names = [...new Set([...CATEGORIES, ...custom, ...rows.map(r => r.category).filter(Boolean)])];
+    const names = [...new Set([...CATEGORIES.filter(c => !hiddenProfiles.includes(c)), ...custom, ...rows.map(r => r.category).filter(Boolean)])];
     return names.map(name => {
       const mine = rows.filter(r => r.category === name);
       return { name, count: mine.length, total: mine.reduce((a, r) => a + Number(r.amount), 0), month: mine.filter(r => sameMonth(r.d)).reduce((a, r) => a + Number(r.amount), 0), custom: custom.includes(name) };
     }).sort((a, b) => (b.count > 0) - (a.count > 0) || b.total - a.total || a.name.localeCompare(b.name));
-  }, [rows, custom]);
+  }, [rows, custom, hiddenProfiles]);
 
   const current = open && cards.find(c => c.name === open);
-  if (current) return <ProfileDetail {...{ profile: current, rows: rows.filter(r => r.category === current.name), onBack: () => setOpen(null), onAdd, onRemove, notify, company }} />;
+  if (current) return <ProfileDetail {...{ profile: current, rows: rows.filter(r => r.category === current.name), bills: bills.filter(b => b.category === current.name), onOpenBill, record: profiles.find(p => p.name === current.name) || (current.name !== "Other" && CATEGORIES.includes(current.name) ? { name: current.name, builtin: true } : null), onBack: () => setOpen(null), onAdd, onRemove, onDelete: async p => { await onDelete(p); setOpen(null); }, notify, company }} />;
 
   return <>
     <section className="panel">
@@ -78,45 +78,75 @@ function Manage({ profiles, counts, onClose, onRename, onDelete }) {
   </Modal>;
 }
 
-function ProfileDetail({ profile, rows, onBack, onAdd, onRemove, notify, company }) {
+function ProfileDetail({ profile, rows, bills, onOpenBill, record, onBack, onAdd, onRemove, onDelete, notify, company }) {
+  const [tab, setTab] = useState("expenses"), [adding, setAdding] = useState(false), [confirmDel, setConfirmDel] = useState(false);
   const [f, setF] = useState({ title: "", payee: "", payeeType: "Employee", amount: "", date: toInputDate() }), [busy, setBusy] = useState(false), [all, setAll] = useState(false);
   const submit = async e => {
     e.preventDefault();
     if (!f.title.trim()) return notify("Enter what the expense was for.", true);
     if (!(Number(f.amount) > 0)) return notify("Enter an amount greater than zero.", true);
     setBusy(true);
-    try { await onAdd({ ...f, title: f.title.trim(), payee: f.payee.trim(), amount: Number(f.amount), category: profile.name, method: "Cash" }); setF(x => ({ ...x, title: "", amount: "" })); notify("Expense added"); }
+    try { await onAdd({ ...f, title: f.title.trim(), payee: f.payee.trim(), amount: Number(f.amount), category: profile.name, method: "Cash" }); setF(x => ({ ...x, title: "", amount: "" })); setAdding(false); notify("Expense added"); }
     catch (ex) { notify(ex.message, true); } finally { setBusy(false); }
   };
-  const shown = all ? rows : rows.slice(0, 10);
+  const remove = async r => { if (!window.confirm(`Delete “${r.title}”?`)) return; try { await onRemove(r.id); notify("Expense deleted"); } catch (ex) { notify(ex.message, true); } };
+  const del = async () => { setBusy(true); try { await onDelete(record); } catch (ex) { notify(ex.message, true); setBusy(false); setConfirmDel(false); } };
+  const shown = all ? rows : rows.slice(0, 15);
+  const toPay = bills.filter(b => b.balance > 0 && b.status !== "Cancelled").reduce((a, b) => a + b.balance, 0);
   const download = () => exportExpenses({ rows, business: company, title: "Profile Statement", kind: "Expense profile", filters: [profile.name], fileName: `${company}-Profile-${profile.name}` }).catch(() => notify("Could not create the Excel file.", true));
-  return <>
-    <section className="panel">
-      <div className="pf-head">
-        <Button kind="ghost" onClick={onBack}><ArrowLeft size={15} />All profiles</Button>
-        <div className="pf-title"><Avatar name={profile.name} size={52} /><div><h3>{profile.name}</h3><p>{profile.count} {profile.count === 1 ? "entry" : "entries"} · this month {money(profile.month)}</p></div></div>
-        <div className="pf-sum"><small>Total spent</small><b className="num">{money(profile.total)}</b></div>
-        <Button kind="outline" onClick={download} disabled={!rows.length}><Download size={15} />Download Excel</Button>
+  return <div className="pfd">
+    <section className="pfd-hero" style={{ "--pf": profileColor(profile.name) }}>
+      <div className="pfd-top">
+        <button className="pfd-back" onClick={onBack} aria-label="Back to all profiles"><ArrowLeft size={17} /><span>Profiles</span></button>
+        {record ? <button className="pfd-del" onClick={() => setConfirmDel(true)}><Trash2 size={15} />Delete profile</button> : <span className="pfd-lock"><Lock size={13} />Always kept</span>}
       </div>
+      <div className="pfd-id"><Avatar name={profile.name} size={60} /><div><h3>{profile.name}</h3><p>Everything you spent under this profile</p></div></div>
     </section>
-    <section className="panel">
-      <div className="panel-head"><div><h3>Add an expense to {profile.name}</h3><p>It counts in the monthly report like any other expense.</p></div></div>
-      <form className="form expense-form" onSubmit={submit}>
-        <label>What for<input value={f.title} onChange={e => setF({ ...f, title: e.target.value })} placeholder="e.g. Labour for plaster work" /></label>
+    <div className="pfd-stats">
+      <div><small>Total spent</small><b className="num">{money(profile.total)}</b></div>
+      <div><small>This month</small><b className="num">{money(profile.month)}</b></div>
+      <div><small>Entries</small><b className="num">{profile.count}</b></div>
+      <div><small>Bills to pay</small><b className="num">{toPay > 0 ? money(toPay) : "—"}</b></div>
+    </div>
+    <div className="pfd-actions">
+      <Button onClick={() => setAdding(true)}><Plus size={16} />Add expense</Button>
+      <Button kind="outline" onClick={download} disabled={!rows.length}><Download size={16} />Download Excel</Button>
+    </div>
+    <section className="panel pfd-list">
+      <div className="panel-head"><div><h3>{tab === "expenses" ? "Expenses" : "Bills to pay"}</h3><p>{tab === "expenses" ? `${rows.length} ${rows.length === 1 ? "entry" : "entries"} · ${money(profile.total)}` : `${bills.length} ${bills.length === 1 ? "bill" : "bills"} · ${money(toPay)} left to pay`}</p></div></div>
+      <div className="segmented pfd-tabs" role="tablist">
+        <button role="tab" aria-selected={tab === "expenses"} className={tab === "expenses" ? "on" : ""} onClick={() => setTab("expenses")}>Expenses ({rows.length})</button>
+        <button role="tab" aria-selected={tab === "bills"} className={tab === "bills" ? "on" : ""} onClick={() => setTab("bills")}>Bills to pay ({bills.length})</button>
+      </div>
+      {tab === "expenses" ? (rows.length === 0 ? <Empty title="No expenses yet" text={`Tap “Add expense” to record the first one in ${profile.name}.`} /> :
+        <ul className="pfd-items">{shown.map(r => <li key={r.id}>
+          <span className="pfd-date"><b>{r.d.getDate()}</b>{r.d.toLocaleString("en-US", { month: "short" })}</span>
+          <span className="pfd-main"><b>{r.title}</b><small>{r.payee ? `${r.payee} · ${r.payeeType}` : "No person"}</small></span>
+          <span className="pfd-amt num">{money(r.amount)}</span>
+          <button className="pfd-trash" aria-label={`Delete ${r.title}`} onClick={() => remove(r)}><Trash2 size={16} /></button>
+        </li>)}</ul>)
+      : (bills.length === 0 ? <Empty title="No bills" text={`Bills you owe to someone under ${profile.name} will show here.`} /> :
+        <ul className="pfd-items">{bills.map(b => <li key={b.id} className="tap" onClick={() => onOpenBill?.(b)}>
+          <span className="pfd-date"><b>{b.date.getDate()}</b>{b.date.toLocaleString("en-US", { month: "short" })}</span>
+          <span className="pfd-main"><b>{b.customer}</b><small>{b.service}</small></span>
+          <span className="pfd-amt num">{money(b.balance > 0 ? b.balance : b.amount)}<Status value={b.status} /></span>
+        </li>)}</ul>)}
+      {tab === "expenses" && rows.length > 15 && <div className="view-all"><Button kind="ghost" onClick={() => setAll(v => !v)}>{all ? "Show latest 15" : `View all ${rows.length} expenses`}</Button></div>}
+    </section>
+
+    {adding && <Modal title={`Add expense`} subtitle={`Goes into ${profile.name} and counts in the monthly report.`} onClose={() => setAdding(false)}
+      actions={<><Button kind="outline" type="button" onClick={() => setAdding(false)}>Cancel</Button><Button type="submit" form="pf-add" disabled={busy}><Plus size={15} />Add expense</Button></>}>
+      <form id="pf-add" className="form single" onSubmit={submit}>
+        <label>What for<input autoFocus value={f.title} onChange={e => setF({ ...f, title: e.target.value })} placeholder="e.g. Labour for plaster work" /></label>
+        <label>Amount (Rs)<input type="number" min="0" step="any" inputMode="decimal" value={f.amount} onChange={e => setF({ ...f, amount: e.target.value })} /></label>
         <label>Paid to <em>optional</em><input value={f.payee} onChange={e => setF({ ...f, payee: e.target.value })} placeholder="e.g. Ali Raza" /></label>
         <label>Person is a<select value={f.payeeType} onChange={e => setF({ ...f, payeeType: e.target.value })}>{PAYEE_TYPES.map(c => <option key={c}>{c}</option>)}</select></label>
-        <label>Amount (Rs)<input type="number" min="0" step="any" inputMode="decimal" value={f.amount} onChange={e => setF({ ...f, amount: e.target.value })} /></label>
         <label>Date<input type="date" value={f.date} onChange={e => setF({ ...f, date: e.target.value })} /></label>
-        <div className="swap"><Button type="submit" disabled={busy}><Plus size={15} />Add expense</Button></div>
       </form>
-    </section>
-    <section className="panel">
-      <div className="panel-head"><div><h3>All expenses in {profile.name}</h3><p>{rows.length} {rows.length === 1 ? "entry" : "entries"} · <b className="num">{money(profile.total)}</b></p></div></div>
-      {rows.length === 0 ? <Empty title="No expenses yet" text={`Add the first expense to ${profile.name} above.`} /> :
-        <div className="table-wrap"><table><thead><tr><th>Date</th><th>Paid to</th><th>Title</th><th className="r">Amount</th><th className="r"><span className="sr">Delete</span></th></tr></thead>
-          <tbody>{shown.map(r => <tr key={r.id}><td>{fmtDate(r.d)}</td><td>{r.payee ? <><b>{r.payee}</b><small>{r.payeeType}</small></> : "—"}</td><td><b>{r.title}</b></td><td className="r num"><b>{money(r.amount)}</b></td>
-            <td className="r"><Button kind="ghost" aria-label={`Delete ${r.title}`} onClick={async () => { if (!window.confirm(`Delete “${r.title}”?`)) return; try { await onRemove(r.id); notify("Expense deleted"); } catch (ex) { notify(ex.message, true); } }}><Trash2 size={15} /></Button></td></tr>)}</tbody></table></div>}
-      {rows.length > 10 && <div className="view-all"><Button kind="ghost" onClick={() => setAll(v => !v)}>{all ? "Show latest 10" : `View all ${rows.length} expenses`}</Button></div>}
-    </section>
-  </>;
+    </Modal>}
+    {confirmDel && <Modal title="Delete this profile?" subtitle={`“${profile.name}” will be removed.`} onClose={() => !busy && setConfirmDel(false)}
+      actions={<><Button kind="outline" type="button" disabled={busy} onClick={() => setConfirmDel(false)}>Cancel</Button><Button kind="danger" disabled={busy} onClick={del}><Trash2 size={15} />Delete profile</Button></>}>
+      <p className="hint">Its {profile.count} {profile.count === 1 ? "expense" : "expenses"} and {bills.length} {bills.length === 1 ? "bill" : "bills"} move to “Other”. No money record is lost.</p>
+    </Modal>}
+  </div>;
 }

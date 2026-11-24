@@ -103,7 +103,7 @@ function Report({ sales, expenses, company, notify }) {
   </>;
 }
 
-function Entries({ expenses, budgets, people, profiles = [], onAdd, onRemove, onSetLimit, notify, company }) {
+function Entries({ expenses, budgets, profiles = [], onAdd, onRemove, onSetLimit, notify, company }) {
   const cats = useMemo(() => [...CATEGORIES, ...profiles.map(p => p.name)], [profiles]);
   const [f, setF] = useState({ title: "", payee: "", payeeType: "Employee", category: "Other", amount: "", date: toInputDate(), method: "Cash" });
   const [busy, setBusy] = useState(false);
@@ -120,7 +120,7 @@ function Entries({ expenses, budgets, people, profiles = [], onAdd, onRemove, on
   const monthByCat = useMemo(() => { const m = {}; expenses.forEach(e => { const d = toLocalDay(e.date); if (d && thisMonth(d)) m[e.category] = (m[e.category] || 0) + Number(e.amount); }); return m; }, [expenses]);
   const monthTotal = Object.values(monthByCat).reduce((a, v) => a + v, 0);
   const pie = Object.entries(monthByCat).filter(([, v]) => v > 0).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-  const names = useMemo(() => [...new Set([...people, ...expenses.map(e => e.payee).filter(Boolean)])].sort((a, b) => a.localeCompare(b)), [people, expenses]);
+  const names = useMemo(() => [...new Set([...expenses.map(e => e.payee).filter(Boolean)])].sort((a, b) => a.localeCompare(b)), [expenses]);
   // Total spent on each person (employee / seller) in the rows currently shown.
   const byPerson = useMemo(() => {
     const m = new Map();
@@ -206,13 +206,13 @@ function Entries({ expenses, budgets, people, profiles = [], onAdd, onRemove, on
 }
 
 
-function Bills({ bills, people, profiles = [], onAdd, onOpen, notify }) {
+function Bills({ bills, profiles = [], onAdd, onOpen, notify }) {
   const cats = useMemo(() => [...CATEGORIES, ...profiles.map(p => p.name)], [profiles]);
   const due = new Date(); due.setDate(due.getDate() + 14);
   const [f, setF] = useState({ payee: "", payeePhone: "", payeeType: "Employee", title: "", category: "Labour", amount: "", dueDate: toInputDate(due), paidNow: "", method: "Cash" });
   const [busy, setBusy] = useState(false), [q, setQ] = useState(""), [tab, setTab] = useState("open"), [all, setAll] = useState(false);
   const set = (k, v) => setF(x => ({ ...x, [k]: v }));
-  const names = useMemo(() => [...new Set([...people, ...bills.map(b => b.customer)])].sort((a, b) => a.localeCompare(b)), [people, bills]);
+  const names = useMemo(() => [...new Set([...bills.map(b => b.customer)])].sort((a, b) => a.localeCompare(b)), [bills]);
   const total = Number(f.amount) || 0, paid = Number(f.paidNow) || 0;
   const pickPerson = v => { const known = bills.find(b => b.customer.toLowerCase() === v.trim().toLowerCase()); setF(x => ({ ...x, payee: v, payeePhone: x.payeePhone || known?.customerPhone || "", payeeType: known?.payeeType || x.payeeType })); };
   const toPay = bills.filter(isOpen).reduce((a, b) => a + b.balance, 0);
@@ -264,14 +264,14 @@ function Bills({ bills, people, profiles = [], onAdd, onOpen, notify }) {
   </>;
 }
 
-export default function Expenses({ sales, expenses, bills = [], budgets, people = [], profiles = [], onAdd, onAddBill, onOpenBill, onRemove, onSetLimit, onCreateProfile, onRenameProfile, onDeleteProfile, notify, company = "Finora Services" }) {
+export default function Expenses({ sales, expenses, bills = [], budgets, profiles = [], hiddenProfiles = [], onAdd, onAddBill, onOpenBill, onRemove, onSetLimit, onCreateProfile, onRenameProfile, onDeleteProfile, notify, company = "Finora Services" }) {
   const [tab, setTab] = useState("profiles");
   const openBills = bills.filter(isOpen).length;
   return <>
     <Segmented label="Expenses section" value={tab} onChange={setTab} options={[["profiles", "Profiles"], ["entries", "Expenses"], ["bills", `Bills${openBills ? ` (${openBills})` : ""}`], ["report", "Report"]]} />
-    {tab === "profiles" ? <Profiles {...{ expenses, profiles, onAdd, onRemove, notify, company, onCreate: onCreateProfile, onRename: onRenameProfile, onDelete: onDeleteProfile }} /> :
+    {tab === "profiles" ? <Profiles {...{ expenses, profiles, hiddenProfiles, bills, onOpenBill, onAdd, onRemove, notify, company, onCreate: onCreateProfile, onRename: onRenameProfile, onDelete: onDeleteProfile }} /> :
       tab === "report" ? <Report sales={sales} expenses={expenses} company={company} notify={notify} /> :
-      tab === "bills" ? <Bills {...{ bills, people, profiles, onAdd: onAddBill, onOpen: onOpenBill, notify }} /> :
-      <Entries {...{ expenses, budgets, people, profiles, onAdd, onRemove, onSetLimit, notify, company }} />}
+      tab === "bills" ? <Bills {...{ bills, profiles, onAdd: onAddBill, onOpen: onOpenBill, notify }} /> :
+      <Entries {...{ expenses, budgets, profiles, onAdd, onRemove, onSetLimit, notify, company }} />}
   </>;
 }

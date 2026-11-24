@@ -1,5 +1,5 @@
 import React from "react";
-import { ReceiptText, Wallet, Users, Calculator, FileSpreadsheet, MessageCircle, TrendingUp, FolderOpen, Database } from "lucide-react";
+import { ReceiptText, Wallet, Users, FileSpreadsheet, MessageCircle, TrendingUp, FolderOpen, Database } from "lucide-react";
 import Logo from "./Logo";
 
 const FEATURES = [
@@ -9,7 +9,6 @@ const FEATURES = [
   [FolderOpen, "Expense profiles", "Every category is a profile (Rent, Labour…). Create your own for a person or a site and see all its spending."],
   [Wallet, "Bills to pay", "Money you owe to employees and sellers, paid in parts, with a payment slip and WhatsApp updates."],
   [TrendingUp, "Profit & loss", "Month-by-month income, expenses and profit for the year, with a chart."],
-  [Calculator, "Work & calculators", "Give work to employees by area × rate, and get reminders before a working permission expires."],
   [FileSpreadsheet, "Excel & PDF", "Download sales, customers, expenses and profit & loss as neat Excel sheets, and invoices as PDF."]
 ];
 
