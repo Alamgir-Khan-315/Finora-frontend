@@ -529,7 +529,7 @@ html, body { max-width: 100%; overflow-x: clip; }
 
   /* ----- top bar ----- */
   .top { padding: calc(10px + env(safe-area-inset-top, 0px)) 14px 10px; gap: 10px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 88%, transparent); }
-  .clock, .new-sale-top, .refresh-btn { display: none; }
+  .clock, .new-sale-top { display: none; }
   .top-brand { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; animation: brand-in .35s cubic-bezier(.2,.8,.2,1) both; }
   .top-brand > div { min-width: 0; line-height: 1.15; }
   .top-brand small { display: block; font: 800 11.5px var(--display); letter-spacing: 1.2px; text-transform: uppercase; color: var(--brand); }
@@ -601,3 +601,19 @@ html, body { max-width: 100%; overflow-x: clip; }
 .sheet-body .contact-hero .contact-actions { flex-wrap: wrap; }
 @media (max-width: 860px) { .bell > .icon-btn { position: relative; } }
 @media (max-width: 380px) { nav.tabbar button span { font-size: 9.5px; letter-spacing: 0; } .tabbar { padding-left: 2px; padding-right: 2px; } .tab-pill { left: 2px; width: calc((100% - 4px) / var(--n)); } }
+
+/* refresh stays in the phone header, so the icons are a little tighter */
+@media (max-width: 860px) {
+  .top { gap: 8px; } .top-actions { gap: 6px; } .top-actions .icon-btn { width: 36px; height: 36px; border-radius: 11px; }
+  .top-brand { gap: 8px; } .top-brand b { font-size: 16.5px; }
+}
+/* locked portfolio field */
+.form label.locked input:disabled { background: var(--hover); color: var(--ink-2); opacity: 1; cursor: not-allowed; -webkit-text-fill-color: var(--ink-2); }
+.form label.locked em { display: inline-flex; align-items: center; gap: 4px; }
+/* info sheet tabs: a pill slides between them */
+.sheet-tabs { position: relative; display: grid; grid-template-columns: 1fr 1fr; margin: 0 14px 12px; padding: 4px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); flex: none; }
+.sheet-tabs i { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); border-radius: 10px; background: var(--brand); box-shadow: 0 4px 12px var(--brand-glow); transform: translateX(calc(var(--i) * 100%)); transition: transform .38s cubic-bezier(.3,1.3,.5,1); }
+.sheet-tabs button { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 7px; border: 0; background: none; padding: 10px 6px; border-radius: 10px; font-weight: 650; color: var(--ink-2); transition: color .25s; }
+.sheet-tabs button.on { color: #fff; } :root[data-theme="dark"] .sheet-tabs button.on { color: #0b1020; }
+.sheet-body { animation: tab-swap .35s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes tab-swap { from { opacity: 0; transform: translateY(10px); } }

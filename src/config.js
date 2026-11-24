@@ -44,7 +44,7 @@ async function send(base, path, options) {
   let body = null;
   if (text) {
     try { body = JSON.parse(text); }
-    catch { throw new Error(response.ok ? "The server returned an invalid response." : `Server error (${response.status}).`); }
+    catch { throw Object.assign(new Error(response.ok ? "The server returned an invalid response." : response.status === 404 ? "The online server is out of date and does not have this feature yet. Redeploy the latest Finora-backend on Vercel." : `Server error (${response.status}).`), { status: response.ok ? 0 : response.status }); }
   }
   if (!response.ok) throw Object.assign(new Error(body?.message || `Request failed (${response.status}).`), { status: response.status });
   return body;

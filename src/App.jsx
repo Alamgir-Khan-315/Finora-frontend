@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { LayoutDashboard, ReceiptText, Users, Settings as Cog, Plus, RefreshCw, AlertCircle, CheckCircle2, Sun, Moon, ArrowUpRight, Calculator, Wallet, Info, UserRound, Phone } from "lucide-react";
-import { apiRequest, resolveServer } from "./config";
+import { apiRequest, resolveServer, DEVELOPER } from "./config";
 import { normalize, normalizeWork, normalizeBill, billExpenseRows, dateInRange, num } from "./lib";
 import { openChatWithText } from "./whatsapp";
 import { Button, Clock } from "./components/ui";
@@ -31,7 +31,7 @@ const HEAD = {
   "Contact (developer)": ["Contact (developer)", "Who made Finora, and how to get a website or software made for your business."],
   "Settings": ["Settings", "Business details shown on your invoices."]
 };
-const DEFAULT_PORTFOLIO = "https://portfolio-web-psi-rosy.vercel.app/";
+const PORTFOLIO = DEVELOPER.portfolio;   // fixed: the developer link cannot be changed from the app
 
 export default function App() {
   const [page, setPage] = useState("Dashboard");
@@ -224,13 +224,13 @@ export default function App() {
           {page === "Expenses" && <Expenses sales={all} expenses={expenseRows} bills={billRows} budgets={budgets} people={people} onAddBill={saveBill} onOpenBill={b => setOpenId(b.id)} onAdd={addExpense} onRemove={removeExpense} onSetLimit={setLimit} notify={notify} company={company} profiles={profiles} onCreateProfile={createProfile} onRenameProfile={renameProfile} onDeleteProfile={deleteProfile} />}
           {page === "Work & calculators" && <Calculators works={workRows} employees={people} onSaveWork={saveWork} onRenewWork={renewWork} onWorkStatus={setWorkStatus} onDeleteWork={deleteWork} onBillWork={billFromWork} notify={notify} />}
           {page === "About Finora" && <About company={company} />}
-          {page === "Contact (developer)" && <Contact portfolio={business.portfolio || DEFAULT_PORTFOLIO} />}
+          {page === "Contact (developer)" && <Contact portfolio={PORTFOLIO} />}
           {page === "Settings" && <Settings business={business} onSave={saveBusiness} />}
         </>}
       </div>
       <footer className="foot">
         <span>© {new Date().getFullYear()} Finora · Made by <b>AK</b></span>
-        <span className="foot-links"><a href={business.portfolio || DEFAULT_PORTFOLIO} target="_blank" rel="noopener noreferrer">Visit profile <ArrowUpRight size={15} /></a><button type="button" onClick={() => go("Contact (developer)")}><Phone size={14} />Contact</button></span>
+        <span className="foot-links"><a href={PORTFOLIO} target="_blank" rel="noopener noreferrer">Visit profile <ArrowUpRight size={15} /></a><button type="button" onClick={() => go("Contact (developer)")}><Phone size={14} />Contact</button></span>
       </footer>
     </main>
 
@@ -239,7 +239,7 @@ export default function App() {
       <i className={`tab-pill ${TABS.some(t => t[0] === page) ? "" : "hide"}`} aria-hidden="true" />
       {TABS.map(([name, label, Icon]) => <button key={name} className={page === name ? "on" : ""} onClick={() => go(name)} aria-label={name} aria-current={page === name ? "page" : undefined}><Icon size={21} strokeWidth={page === name ? 2.3 : 1.9} /><span>{label}</span></button>)}
     </nav>
-    {info && <InfoSheet company={company} portfolio={business.portfolio || DEFAULT_PORTFOLIO} onClose={() => setInfo(false)} onRefresh={load} loading={loading} />}
+    {info && <InfoSheet company={company} portfolio={PORTFOLIO} onClose={() => setInfo(false)} />}
 
     {open && <InvoiceModal invoice={open} company={company} onClose={() => setOpenId(null)} onMarkPaid={markPaid} onCancel={cancel} onDelete={remove} onSavePhone={savePhone} onAddPayment={addPayment} onRemovePayment={removePayment} notice={notice} onSendNotice={sendNotice} onDismissNotice={() => setNotice(null)} notify={notify} />}
     {form && <SaleForm services={services} customers={customers} onClose={() => setForm(false)} onSave={save} />}
