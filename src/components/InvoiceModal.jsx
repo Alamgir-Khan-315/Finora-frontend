@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { Download, Check, Ban, Trash2, Printer, Pencil, Share2, Wallet, X, BellRing } from "lucide-react";
+import { Download, Check, Ban, Trash2, Image as ImageIcon, Pencil, Share2, Wallet, X, BellRing } from "lucide-react";
 import { money, fmtDate, isValidPhone, prettyPhone, isOpen, siteOf, toInputDate, docLabels } from "../lib";
-import { sendInvoiceOnWhatsApp, shareInvoicePicture, canSharePicture } from "../whatsapp";
+import { sendInvoiceOnWhatsApp, shareInvoicePicture, canSharePicture, downloadInvoiceImage } from "../whatsapp";
 import { downloadInvoicePdf } from "../pdf";
 import { Modal, Button, Status } from "./ui";
 import Logo from "./Logo";
@@ -45,7 +45,7 @@ export default function InvoiceModal({ invoice: inv, company, onClose, onMarkPai
     catch (e) { notify(e.message, true); }
     finally { setBusy(false); }
   };
-  const print = () => { document.title = `${inv.id} - ${inv.customer}`; window.print(); };
+  const picture = async () => { try { await downloadInvoiceImage(inv, company); notify(`${inv.id}.png downloaded`); } catch (e) { notify(e.message, true); } };
   const download = async () => { try { await downloadInvoicePdf(inv, company); notify(`${inv.id}.pdf downloaded`); } catch (e) { notify(e.message, true); } };
 
   return <Modal wide title={isBill ? "Payment slip" : "Invoice"} subtitle={`${inv.id} · ${inv.customer}`} onClose={onClose}
@@ -53,11 +53,11 @@ export default function InvoiceModal({ invoice: inv, company, onClose, onMarkPai
       <div className="modal-actions-left">
         {confirmDelete
           ? <><span className="confirm-text">Delete this permanently?</span><Button kind="danger" onClick={() => onDelete(inv)}>Yes, delete</Button><Button kind="ghost" onClick={() => setConfirmDelete(false)}>Keep it</Button></>
-          : <>{canDelete && <Button kind="danger-soft" onClick={() => setConfirmDelete(true)}><Trash2 size={15} />Delete</Button>}
-            {canEdit && inv.status !== "Cancelled" && inv.status !== "Paid" && <Button kind="danger-soft" onClick={() => onCancel(inv)}><Ban size={15} />{isBill ? "Cancel" : "Cancel invoice"}</Button>}</>}
+          : <>{canDelete && <Button kind="ghost" onClick={() => setConfirmDelete(true)}><Trash2 size={15} />Delete</Button>}
+            {canEdit && inv.status !== "Cancelled" && inv.status !== "Paid" && <Button kind="ghost" onClick={() => onCancel(inv)}><Ban size={15} />{isBill ? "Cancel" : "Cancel invoice"}</Button>}</>}
       </div>
-      {open && canEdit && <Button kind="success" onClick={() => onMarkPaid(inv)} title="Record the whole remaining amount as received"><Check size={15} />{inv.paidAmount > 0 ? "Mark rest as paid" : "Mark as paid"}</Button>}
-      <Button kind="outline" onClick={print} title="Print this invoice"><Printer size={15} /><span className="btn-text">Print</span></Button>
+      {open && canEdit && <Button kind="outline" onClick={() => onMarkPaid(inv)} title="Record the whole remaining amount as received"><Check size={15} />{inv.paidAmount > 0 ? "Mark rest as paid" : "Mark as paid"}</Button>}
+      <Button kind="outline" onClick={picture} title="Download the invoice as a picture"><ImageIcon size={15} /><span className="btn-text">Picture</span></Button>
       <Button kind="outline" onClick={download}><Download size={15} /><span className="btn-text">PDF</span></Button>
       {canSharePicture() && <Button kind="outline" onClick={share} disabled={busy} title="Share picture + message through the share sheet (you choose the chat)"><Share2 size={15} /><span className="btn-text">Share</span></Button>}
       <Button kind="whatsapp" onClick={whatsapp} disabled={busy} title="Open this client's WhatsApp chat with the message and the invoice picture copied"><WhatsAppIcon />{busy ? "Preparing…" : "WhatsApp"}</Button>
@@ -87,7 +87,7 @@ export default function InvoiceModal({ invoice: inv, company, onClose, onMarkPai
         <label>{isBill ? "Amount paid" : "Amount received"}<input type="number" min="0" step="any" inputMode="decimal" value={pay.amount} onChange={e => setPay({ ...pay, amount: e.target.value })} placeholder={`up to ${Math.round(inv.balance)}`} /></label>
         <label>Method<select value={pay.method} onChange={e => setPay({ ...pay, method: e.target.value })}><option>Cash</option><option>Bank Transfer</option><option>Card</option><option>Online</option><option>Cheque</option></select></label>
         <label>Date<input type="date" value={pay.date} max={toInputDate()} onChange={e => setPay({ ...pay, date: e.target.value })} /></label>
-        <label>Description <em>optional</em><input value={pay.note} onChange={e => setPay({ ...pay, note: e.target.value })} placeholder="e.g. 2nd instalment" /></label>
+        <label>Note <em>optional</em><input value={pay.note} onChange={e => setPay({ ...pay, note: e.target.value })} placeholder="e.g. 2nd instalment" /></label>
         <div className="pay-actions">
           <Button type="button" kind="ghost" onClick={() => setPay(p => ({ ...p, amount: String(inv.balance) }))}>Full remaining</Button>
           <Button type="submit" disabled={paying}><Check size={15} />{paying ? "Saving…" : "Record payment"}</Button>
@@ -125,7 +125,7 @@ export default function InvoiceModal({ invoice: inv, company, onClose, onMarkPai
         <div className="grand"><span>{open ? L.due : inv.status === "Paid" ? L.paid : "Cancelled"}</span><b className="num">{money(due || inv.amount)}</b></div>
       </div>
 
-      {inv.notes && <p className="paper-notes"><small>Description</small>{inv.notes}</p>}
+      {inv.notes && <p className="paper-notes"><small>Notes</small>{inv.notes}</p>}
       <footer className="paper-foot">{isBill ? "Thank you." : "Thank you for your business."}</footer>
       {inv.status === "Paid" && <div className="stamp">Paid</div>}
       {open && inv.paidAmount > 0 && <div className="stamp partial">Partial</div>}

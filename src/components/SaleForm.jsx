@@ -50,7 +50,7 @@ export default function SaleForm({ services, customers, onClose, onSave }) {
         ? <label>Paid by<select value={f.method} onChange={e => set("method", e.target.value)}><option>Cash</option><option>Bank Transfer</option><option>Card</option><option>Online</option><option>Cheque</option></select></label>
         : <div />}
       {total > 0 && <div className="pay-hint span-2">{paid >= total ? "Whole amount received: the invoice will be marked Paid." : paid > 0 ? `${money(paid)} received, ${money(total - paid)} remaining. The invoice will be marked Partial.` : "Nothing received yet: the invoice will be Pending. You can record payments later, in parts."}</div>}
-      <label className="span-2"><span>Description <em>optional, printed on the invoice</em></span><textarea rows="3" value={f.notes} onChange={e => set("notes", e.target.value)} placeholder="Extra details: scope of work, materials, terms, anything useful…" /></label>
+      <label className="span-2"><span>Notes <em>optional, printed on the invoice</em></span><textarea rows="2" value={f.notes} onChange={e => set("notes", e.target.value)} /></label>
       {err && <div className="form-error span-2" role="alert">{err}</div>}
     </form>
   </Modal>;

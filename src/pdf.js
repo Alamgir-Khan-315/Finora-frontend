@@ -62,7 +62,7 @@ export async function downloadInvoicePdf(inv, company = "Finora Services") {
   doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.text(money(due || inv.amount), rightX, by + 10.5, { align: "right" });
 
   if (inv.notes) {
-    doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...soft); doc.text("Description", M, 166);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...soft); doc.text("Notes", M, 166);
     doc.setFontSize(10); doc.setTextColor(...ink); doc.text(doc.splitTextToSize(inv.notes, 85), M, 173);
   }
 

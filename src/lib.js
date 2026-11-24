@@ -95,7 +95,7 @@ export function dueText(row) {
 
 export function toCsv(rows) {
   const esc = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const head = ["Invoice", "Customer", "Email", "WhatsApp", "House", "Address", "Service", "Issue date", "Due date", "Amount (PKR)", "Received (PKR)", "Remaining (PKR)", "Status", "Method", "Description"];
+  const head = ["Invoice", "Customer", "Email", "WhatsApp", "House", "Address", "Service", "Issue date", "Due date", "Amount (PKR)", "Received (PKR)", "Remaining (PKR)", "Status", "Method", "Notes"];
   const body = rows.map(r => [r.id, r.customer, r.customerEmail, r.customerPhone, r.house, r.address, r.service, fmtDate(r.date), fmtDate(r.dueDate), r.amount, r.paidAmount, r.balance, r.status, r.method, r.notes]);
   return [head, ...body].map(line => line.map(esc).join(",")).join("\n");
 }
@@ -123,7 +123,34 @@ export const prettyPhone = v => { const n = waNumber(v); return n ? `+${n}` : ""
 let logoPromise;
 export const loadLogo = () => logoPromise ??= new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = `${import.meta.env.BASE_URL}logo-512.png`; });
 
+// ---------- Construction work & working permissions ----------
+export const workAmount = (area, rate) => { const a = Number(area), r = Number(rate); return a > 0 && r > 0 ? Math.round(a * r * 100) / 100 : 0; };
 export const num = n => Number(n || 0).toLocaleString("en-US", { maximumFractionDigits: 2 });
+
+export function normalizeWork(raw) {
+  const permitStart = toLocalDay(raw.permitStart), permitDue = toLocalDay(raw.permitDue);
+  return {
+    id: raw.id, employee: raw.employee || "", employeePhone: raw.employeePhone || "", site: raw.site || "",
+    areaSqft: Number(raw.areaSqft) || 0, ratePerSqft: Number(raw.ratePerSqft) || 0, amount: Number(raw.amount) || workAmount(raw.areaSqft, raw.ratePerSqft),
+    status: raw.status || "Active", startedOn: toLocalDay(raw.startedOn), permitNo: raw.permitNo || "", permitAuthority: raw.permitAuthority || "",
+    permitStart, permitDue, notes: raw.notes || "",
+    history: (raw.permitHistory || []).map(h => ({ id: h.id, permitNo: h.permitNo || "", start: toLocalDay(h.permitStart), due: toLocalDay(h.permitDue), renewedAt: toLocalDay(h.renewedAt), note: h.note || "" })),
+    permit: permitState(permitDue, raw.status || "Active")
+  };
+}
+
+// How the working permission looks today. "soon" = expires this calendar month or within 30 days, so it shows in follow-up.
+export function permitState(due, status = "Active") {
+  if (status !== "Active") return { level: "closed", days: null, label: status === "Completed" ? "Work completed" : "Work cancelled" };
+  if (!due) return { level: "none", days: null, label: "No permission date" };
+  const today = startOfToday(), days = Math.round((due - today) / 864e5);
+  if (days < 0) return { level: "expired", days, label: `Expired ${-days} day${-days > 1 ? "s" : ""} ago` };
+  if (days === 0) return { level: "soon", days, label: "Expires today" };
+  const sameMonth = due.getMonth() === today.getMonth() && due.getFullYear() === today.getFullYear();
+  if (days <= 30 || sameMonth) return { level: "soon", days, label: `Expires in ${days} day${days > 1 ? "s" : ""}` };
+  return { level: "ok", days, label: `Valid · ${days} days left` };
+}
+export const permitNeedsAction = w => w.permit.level === "expired" || w.permit.level === "soon";
 
 // ---------- Bills to pay (money you owe to a person), shaped like invoices so the same screens work ----------
 export function normalizeBill(raw) {

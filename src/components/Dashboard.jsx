@@ -1,7 +1,8 @@
 import React, { useMemo } from "react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Check, TrendingUp, TrendingDown, HandCoins, Receipt, Clock3 } from "lucide-react";
-import { money, fmtDate, dueText, RANGES, dateInRange, paymentEvents, expenseDate, isOpen } from "../lib";
+import { Check, TrendingUp, TrendingDown, HandCoins, Receipt, Clock3, ShieldAlert } from "lucide-react";
+import { money, fmtDate, dueText, RANGES, dateInRange, paymentEvents, expenseDate, isOpen, permitNeedsAction } from "../lib";
+import { PermitBadge } from "./WorkOrders";
 import { Status, Button, Empty, Count, Segmented } from "./ui";
 
 const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
@@ -37,7 +38,7 @@ function Kpi({ tone, icon: Icon, label, value, note, signed }) {
   </div>;
 }
 
-export default function Dashboard({ rows, allRows, expenses, range, setRange, onOpen, onMarkPaid, goSales, goExpenses }) {
+export default function Dashboard({ rows, allRows, expenses, works = [], range, setRange, onOpen, onMarkPaid, goSales, goExpenses, goWork }) {
   const rangeLabel = RANGES.find(r => r[0] === range)[1];
   const live = rows.filter(x => x.status !== "Cancelled");
   const sum = (list, f) => list.reduce((a, x) => a + f(x), 0);
@@ -53,6 +54,7 @@ export default function Dashboard({ rows, allRows, expenses, range, setRange, on
   const net = received - spent;
   const toCollect = allRows.filter(isOpen).reduce((a, x) => a + x.balance, 0);
   const unpaidCount = allRows.filter(isOpen).length;
+  const permitAlerts = useMemo(() => works.filter(permitNeedsAction).sort((a, b) => (a.permitDue || 0) - (b.permitDue || 0)), [works]);
 
   const chart = useMemo(() => monthlyData(allRows), [allRows]);
   const followUp = useMemo(() => allRows.filter(isOpen)
@@ -105,6 +107,14 @@ export default function Dashboard({ rows, allRows, expenses, range, setRange, on
       </div>
     </section>
 
+    {permitAlerts.length > 0 && <section className="panel permit-alert">
+      <div className="panel-head"><div><h3><ShieldAlert size={18} /> Working permissions to renew</h3><p>Expired or expiring this month. Renew them so work can continue legally.</p></div><Button kind="outline" onClick={goWork}>Open work &amp; permissions</Button></div>
+      <ul className="followup">{permitAlerts.slice(0, 6).map(w => <li key={w.id}>
+        <button className="followup-main" onClick={goWork}><b>{w.employee}</b><span>{w.site}{w.permitNo ? ` · ${w.permitNo}` : ""} · due {fmtDate(w.permitDue)}</span></button>
+        <PermitBadge permit={w.permit} />
+      </li>)}</ul>
+    </section>}
+
     <div className="grid-2">
       <section className="panel">
         <div className="panel-head"><div><h3>Sales by month</h3><p>Last 6 months, by invoice date</p></div>
@@ -132,7 +142,7 @@ export default function Dashboard({ rows, allRows, expenses, range, setRange, on
               <span className={r.daysLate ? "late" : ""}>{r.id} · {dueText(r)}{r.paidAmount > 0 ? ` · received ${money(r.paidAmount)}` : ""}</span>
             </button>
             <b className="num">{money(r.balance)}</b>
-            <Button kind="success" onClick={() => onMarkPaid(r)} title="Mark the remaining amount as paid"><Check size={15} />Paid</Button>
+            <Button kind="ghost" onClick={() => onMarkPaid(r)} title="Mark the remaining amount as paid"><Check size={15} />Paid</Button>
           </li>)}</ul>}
       </section>
     </div>

@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from "react";
 import { Search, Eye, Check, Download, Plus } from "lucide-react";
-import { money, fmtDate, STATUSES, dueText, toCsv, downloadText, RANGES, isOpen, siteOf } from "../lib";
+import { money, fmtDate, STATUSES, dueText, RANGES, isOpen, siteOf } from "../lib";
+import { exportSales } from "../exports";
 import { Status, Button, Empty, Segmented } from "./ui";
 
-export default function Sales({ rows, range, setRange, onOpen, onMarkPaid, onAdd, initialQuery = "" }) {
+export default function Sales({ rows, range, setRange, onOpen, onMarkPaid, onAdd, initialQuery = "", company = "Finora Services", notify }) {
   const [tab, setTab] = useState("All");
   const [q, setQ] = useState(initialQuery);
   const [method, setMethod] = useState("All");
@@ -28,7 +29,7 @@ export default function Sales({ rows, range, setRange, onOpen, onMarkPaid, onAdd
         <label className="filter"><span>To</span><input type="date" value={to} min={from || undefined} onChange={e => setTo(e.target.value)} /></label>
         <label className="filter"><span>Method</span><select value={method} onChange={e => setMethod(e.target.value)}><option>All</option>{methods.map(m => <option key={m}>{m}</option>)}</select></label>
         <label className="search"><Search size={16} /><input placeholder="Search invoice, customer, house, address" value={q} onChange={e => setQ(e.target.value)} /></label>
-        <Button kind="outline" onClick={() => downloadText(`sales-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(shown))} disabled={!shown.length}><Download size={15} />Export CSV</Button>
+        <Button kind="outline" onClick={() => exportSales({ rows: shown, business: company, filters: [RANGES.find(r => r[0] === range)[1], tab !== "All" && `Status: ${tab}`, method !== "All" && `Method: ${method}`, from && `From ${from}`, to && `To ${to}`, q.trim() && `Search: ${q.trim()}`].filter(Boolean) }).catch(() => notify?.("Could not create the Excel file.", true))} disabled={!shown.length}><Download size={15} />Export Excel</Button>
       </div>
     </div>
     <div className="subline"><span>{shown.length} {shown.length === 1 ? "invoice" : "invoices"} · {rangeLabel}</span><b className="num">Total {money(shown.filter(x => x.status !== "Cancelled").reduce((a, x) => a + x.amount, 0))}</b></div>
@@ -46,7 +47,7 @@ export default function Sales({ rows, range, setRange, onOpen, onMarkPaid, onAdd
           <td><Status value={r.status} /></td>
           <td className="r" onClick={e => e.stopPropagation()}>
             <div className="row-actions">
-              {onMarkPaid && isOpen(r) && <Button kind="success" onClick={() => onMarkPaid(r)} title="Mark the remaining amount as paid"><Check size={15} />Paid</Button>}
+              {onMarkPaid && isOpen(r) && <Button kind="ghost" onClick={() => onMarkPaid(r)} title="Mark the remaining amount as paid"><Check size={15} />Paid</Button>}
               <Button kind="outline" onClick={() => onOpen(r)}><Eye size={15} />Invoice</Button>
             </div>
           </td>
