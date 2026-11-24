@@ -617,6 +617,7 @@ html, body { max-width: 100%; overflow-x: clip; }
 .sheet-tabs button.on { color: #fff; } :root[data-theme="dark"] .sheet-tabs button.on { color: #0b1020; }
 .sheet-body { animation: tab-swap .35s cubic-bezier(.2,.8,.2,1) both; }
 @keyframes tab-swap { from { opacity: 0; transform: translateY(10px); } }
+<<<<<<< HEAD
 
 /* ============================================================
    Profile detail
@@ -692,3 +693,5 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   .pf-head, .panel-head { gap: 10px; }
   .panel-head .toolbar-right { grid-template-columns: 1fr 1fr; }
 }
+=======
+>>>>>>> 901e7f00b926b682a5b4b0feea7605c92c6f09b7
