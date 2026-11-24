@@ -212,7 +212,7 @@ export default function App() {
         {loaded && <>
           {page === "Dashboard" && <Dashboard rows={dashRows} allRows={all} expenses={expenseRows} range={dashRange} setRange={setDashRange} onOpen={r => setOpenId(r.id)} onMarkPaid={markPaid} goSales={() => go("Sales & invoices")} goExpenses={() => go("Expenses")} />}
           {page === "Sales & invoices" && <Sales key={salesQuery} initialQuery={salesQuery} rows={salesRows} range={salesRange} setRange={setSalesRange} onOpen={r => setOpenId(r.id)} onMarkPaid={markPaid} onAdd={() => setForm(true)} company={company} notify={notify} />}
-          {page === "Customers" && <Customers rows={all} company={company} notify={notify} onFilter={name => { setSalesRange("all"); go("Sales & invoices"); setSalesQuery(name); }} />}
+          {page === "Customers" && <Customers rows={all} company={company} notify={notify} onOpen={r => setOpenId(r.id)} onNewSale={() => setForm(true)} onFilter={name => { setSalesRange("all"); go("Sales & invoices"); setSalesQuery(name); }} />}
           {page === "Expenses" && <Expenses sales={all} expenses={expenseRows} bills={billRows} budgets={budgets} onAddBill={saveBill} onOpenBill={b => setOpenId(b.id)} onAdd={addExpense} onRemove={removeExpense} onSetLimit={setLimit} notify={notify} company={company} profiles={profiles} hiddenProfiles={business.hiddenProfiles || []} onCreateProfile={createProfile} onRenameProfile={renameProfile} onDeleteProfile={deleteProfile} />}
           {page === "About Finora" && <About company={company} />}
           {page === "Contact (developer)" && <Contact portfolio={PORTFOLIO} />}
