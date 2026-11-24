@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, RefreshCw, UserRound, Info } from "lucide-react";
+import { X, UserRound, Info } from "lucide-react";
 import Contact from "./Contact";
 import About from "./About";
 
-// Phone-only bottom sheet opened from the (i) button in the header: developer contact first, About Finora below it.
-export default function InfoSheet({ company, portfolio, onClose, onRefresh, loading }) {
-  const [closing, setClosing] = useState(false);
+const TABS = [["dev", "Developer", UserRound], ["about", "About software", Info]];
+
+// Phone-only bottom sheet opened from the (i) button in the header. Two tabs: Developer (contact) and About software.
+export default function InfoSheet({ company, portfolio, onClose }) {
+  const [closing, setClosing] = useState(false), [tab, setTab] = useState("dev");
   const close = () => { setClosing(true); setTimeout(onClose, 220); };
   useEffect(() => {
     const onKey = e => e.key === "Escape" && close();
@@ -14,22 +16,21 @@ export default function InfoSheet({ company, portfolio, onClose, onRefresh, load
     const old = document.body.style.overflow; document.body.style.overflow = "hidden";
     return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = old; };
   }, []);
+  const idx = TABS.findIndex(t => t[0] === tab);
   return createPortal(
     <div className={`sheet-backdrop ${closing ? "out" : ""}`} onMouseDown={close}>
-      <div className="sheet" role="dialog" aria-modal="true" aria-label="About and developer" onMouseDown={e => e.stopPropagation()}>
+      <div className="sheet" role="dialog" aria-modal="true" aria-label="Info" onMouseDown={e => e.stopPropagation()}>
         <span className="sheet-grab" aria-hidden="true" />
         <div className="sheet-head">
           <h2>Info</h2>
-          <div className="sheet-head-actions">
-            <button className="icon-btn" onClick={onRefresh} aria-label="Refresh data" title="Refresh data"><RefreshCw size={17} className={loading ? "spin" : ""} /></button>
-            <button className="icon-btn" onClick={close} aria-label="Close"><X size={18} /></button>
-          </div>
+          <button className="icon-btn" onClick={close} aria-label="Close"><X size={18} /></button>
         </div>
-        <div className="sheet-body page-gap">
-          <h3 className="sheet-title"><UserRound size={16} /> Contact (developer)</h3>
-          <Contact portfolio={portfolio} />
-          <h3 className="sheet-title"><Info size={16} /> About Finora</h3>
-          <About company={company} />
+        <div className="sheet-tabs" role="tablist" style={{ "--i": idx }}>
+          <i aria-hidden="true" />
+          {TABS.map(([key, label, Icon]) => <button key={key} role="tab" aria-selected={tab === key} className={tab === key ? "on" : ""} onClick={() => setTab(key)}><Icon size={15} />{label}</button>)}
+        </div>
+        <div className="sheet-body page-gap" key={tab} role="tabpanel">
+          {tab === "dev" ? <Contact portfolio={portfolio} /> : <About company={company} />}
         </div>
       </div>
     </div>,
